@@ -4,7 +4,9 @@ import {
   getProviderLoginCommand,
 } from "@/lib/aiUsage/providerCli";
 import { AI_PROVIDER_CONFIG_DIR_SPECS } from "@/lib/aiUsage/providerConfigDir";
-import type { AiUsageProvider } from "@/lib/aiUsage/types";
+import type { AiLoginProvider } from "@/lib/aiUsage/loginProvider";
+import { createLocalShellEnvironment } from "@/lib/shellEnvironment";
+import { prepareLoginBrowser } from "./loginBrowser";
 
 /**
  * 계정 로그인은 태스크 터미널이 아니다.
@@ -14,6 +16,7 @@ import type { AiUsageProvider } from "@/lib/aiUsage/types";
  */
 interface AiAccountLoginSession {
   pty: import("node-pty").IPty;
+  disposeBrowser: () => Promise<void>;
 }
 
 const loginSessions = new Map<string, AiAccountLoginSession>();
@@ -29,7 +32,7 @@ export interface AiAccountLoginOpenResult {
 
 export async function openAiAccountLogin(
   webContents: WebContents,
-  provider: AiUsageProvider,
+  provider: AiLoginProvider,
   accountRoot: string,
   cols: number,
   rows: number,
@@ -39,14 +42,19 @@ export async function openAiAccountLogin(
     return { ok: true };
   }
 
+  if (!["claude", "codex", "gemini", "antigravity"].includes(provider)) {
+    return { ok: false, error: "Unsupported login provider" };
+  }
   const { command, args } = getProviderLoginCommand(provider);
-  const environment = createProviderCliEnvironment(
+  const environment = provider === "antigravity" ? createLocalShellEnvironment() : createProviderCliEnvironment(
     AI_PROVIDER_CONFIG_DIR_SPECS[provider],
     accountRoot,
   );
 
   let ptyProcess: import("node-pty").IPty;
+  let disposeBrowser = async () => {};
   try {
+    disposeBrowser = await prepareLoginBrowser(environment);
     const pty = await import("node-pty");
     ptyProcess = pty.spawn(command, args, {
       name: "xterm-color",
@@ -56,13 +64,15 @@ export async function openAiAccountLogin(
       env: environment,
     });
   } catch (error) {
+    await disposeBrowser();
     return {
       ok: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: `Could not start ${command}. Install it in the same environment as KanVibe and try again. ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 
-  loginSessions.set(sessionKey, { pty: ptyProcess });
+  const session = { pty: ptyProcess, disposeBrowser };
+  loginSessions.set(sessionKey, session);
 
   ptyProcess.onData((data) => {
     if (!webContents.isDestroyed()) {
@@ -71,6 +81,8 @@ export async function openAiAccountLogin(
   });
 
   ptyProcess.onExit(({ exitCode }) => {
+    void disposeBrowser();
+    if (loginSessions.get(sessionKey) !== session) return;
     loginSessions.delete(sessionKey);
     if (!webContents.isDestroyed()) {
       webContents.send("kanvibe:ai-login-exit", { accountRoot, exitCode });
@@ -106,14 +118,17 @@ export function closeAiAccountLogin(webContentsId: number, accountRoot: string):
 
   loginSessions.delete(sessionKey);
   session.pty.kill();
+  void session.disposeBrowser();
 }
 
 /** 창이 사라지면 그 창이 띄운 로그인 프로세스도 남겨 두지 않는다 */
 export function closeWindowAiAccountLogins(webContentsId: number): void {
   for (const sessionKey of [...loginSessions.keys()]) {
     if (sessionKey.startsWith(`${webContentsId}:`)) {
-      loginSessions.get(sessionKey)?.pty.kill();
+      const session = loginSessions.get(sessionKey);
       loginSessions.delete(sessionKey);
+      session?.pty.kill();
+      void session?.disposeBrowser();
     }
   }
 }

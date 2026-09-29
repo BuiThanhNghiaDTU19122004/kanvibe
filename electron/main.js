@@ -7,7 +7,7 @@ const os = require("node:os");
 const path = require("node:path");
 const process = require("node:process");
 const { pathToFileURL } = require("node:url");
-const { app, BrowserWindow, clipboard, ipcMain, session, shell } = require("electron");
+const { app, BrowserWindow, clipboard, ipcMain, session } = require("electron");
 const { createDesktopDiagnostics, resolveDesktopLogPath, serializeErrorForLog } = require("./diagnostics");
 const { applyAppDataDirectoryOverride } = require("./runtimeEnvironment");
 
@@ -705,7 +705,8 @@ function attachWindowHandlers(browserWindow) {
       };
     }
 
-    void shell.openExternal(url);
+    const { openExternalBrowser } = require(getRuntimeModulePath(path.join("src", "desktop", "main", "loginBrowser.ts")));
+    void openExternalBrowser(url).catch((error) => console.error("Could not open browser:", error));
     return { action: "deny" };
   });
 

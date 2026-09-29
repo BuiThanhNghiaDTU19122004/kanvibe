@@ -6,6 +6,7 @@ import {
 } from "@/lib/aiUsage/providerConfigDir";
 import { createLocalShellEnvironment } from "@/lib/shellEnvironment";
 import type { AiUsageProvider } from "@/lib/aiUsage/types";
+import type { AiLoginProvider } from "./loginProvider";
 
 /** 상태 조회는 토큰 갱신을 위해 네트워크를 한 번 타므로 사용량 조회보다 넉넉히 준다 */
 const PROVIDER_CLI_TIMEOUT_MS = 30_000;
@@ -126,10 +127,13 @@ export function createProviderCliEnvironment(
 }
 
 /** 로그인 세션이 띄울 명령. PTY를 다루는 쪽이 실행 방식을 정하므로 여기서는 이름과 인자만 준다 */
-export function getProviderLoginCommand(provider: AiUsageProvider): {
+export function getProviderLoginCommand(provider: AiLoginProvider): {
   command: string;
   args: string[];
 } {
+  if (provider === "antigravity") {
+    return { command: "agy", args: [] };
+  }
   const { command, loginArgs } = AI_PROVIDER_CLI_SPECS[provider];
   return { command, args: loginArgs };
 }
@@ -186,7 +190,7 @@ export async function readProviderAuthStatus(
     return null;
   }
 
-  return parseStatus(result.stdout);
+  return parseStatus(provider === "codex" ? `${result.stdout}\n${result.stderr}` : result.stdout);
 }
 
 /**

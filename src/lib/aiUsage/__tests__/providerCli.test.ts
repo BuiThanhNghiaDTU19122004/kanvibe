@@ -97,6 +97,9 @@ describe("createProviderCliEnvironment", () => {
 });
 
 describe("getProviderLoginCommand", () => {
+  it("launches the native Antigravity CLI without legacy Gemini flags", () => {
+    expect(getProviderLoginCommand("antigravity")).toEqual({ command: "agy", args: [] });
+  });
   it("Claude는 구독 로그인을 곧바로 고르게 해 선택 화면을 건너뛴다", () => {
     expect(getProviderLoginCommand("claude")).toEqual({
       command: "claude",
@@ -110,6 +113,12 @@ describe("getProviderLoginCommand", () => {
 });
 
 describe("readProviderAuthStatus", () => {
+  it("reads Codex status from stderr, where the native CLI writes it", async () => {
+    mockExecFile.mockImplementation((_command, _args, _options, callback) => {
+      callback(null, "", "Logged in using ChatGPT\n");
+    });
+    expect((await readProviderAuthStatus("codex", "/tmp/codex"))?.isLoggedIn).toBe(true);
+  });
   it("Claude는 로그인 여부와 이메일과 구독 등급을 한 번에 알려준다", async () => {
     stubCliOutput(JSON.stringify({
       loggedIn: true,

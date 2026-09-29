@@ -11,12 +11,13 @@ import {
 } from "@/desktop/renderer/actions/aiAccounts";
 import type { AiAccountSummary } from "@/desktop/main/services/aiAccountService";
 import type { AiUsageProvider } from "@/lib/aiUsage/types";
+import type { AiLoginProvider } from "@/lib/aiUsage/loginProvider";
 
 const AI_USAGE_PROVIDERS: AiUsageProvider[] = ["claude", "codex", "gemini"];
 
 /** 로그인 화면이 열려 있는 계정. 계정 루트가 세션을 가리킨다 */
 interface ActiveLoginSession {
-  provider: AiUsageProvider;
+  provider: AiLoginProvider;
   accountRoot: string;
 }
 
@@ -229,6 +230,22 @@ export default function AiAccountsRoute() {
           <AiUsagePanel isOpen />
         </section>
 
+        <section className="rounded-xl border border-border-default bg-bg-surface p-5" data-testid="ai-accounts-provider-antigravity">
+          <h2 className="text-sm font-semibold text-text-primary">Google Antigravity</h2>
+          <p className="my-3 text-xs text-text-muted">
+            Sign in with Google using Antigravity CLI. Your account and model quotas are managed in the CLI; use /usage to view quotas and /logout to switch accounts.
+          </p>
+          <button
+            type="button"
+            className="rounded-md bg-brand-primary px-3 py-1 text-xs text-white disabled:opacity-50"
+            disabled={activeLogin?.provider === "antigravity"}
+            onClick={() => setActiveLogin({ provider: "antigravity", accountRoot: "antigravity-default" })}
+            data-testid="antigravity-login"
+          >
+            {t("login")}
+          </button>
+        </section>
+
         {groupAccountsByProvider(accounts).map((group) => (
           <section
             key={group.provider}
@@ -238,7 +255,7 @@ export default function AiAccountsRoute() {
             <header className="mb-3 flex items-center gap-2">
               <AiProviderIcon provider={group.provider} size={16} />
               <h2 className="text-sm font-semibold capitalize text-text-primary">
-                {group.provider}
+                {group.provider === "gemini" ? "Gemini CLI (legacy)" : group.provider}
               </h2>
             </header>
 

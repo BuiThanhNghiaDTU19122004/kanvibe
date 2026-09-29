@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef } from "react";
 import "@xterm/xterm/css/xterm.css";
 import { createTerminalOptions } from "@/lib/terminalMouseSelection";
 import { installOsc52ClipboardHandler } from "@/lib/terminalClipboard";
-import type { AiUsageProvider } from "@/lib/aiUsage/types";
+import type { AiLoginProvider } from "@/lib/aiUsage/loginProvider";
 
 interface AiAccountLoginTerminalProps {
-  provider: AiUsageProvider;
+  provider: AiLoginProvider;
   /** 로그인 세션은 태스크가 아니라 계정 루트로 식별한다 */
   accountRoot: string;
   onExit: (exitCode: number) => void;
@@ -34,14 +34,18 @@ export default function AiAccountLoginTerminal({
       return undefined;
     }
 
-    const [{ Terminal: XTerm }, { FitAddon }] = await Promise.all([
+    const [{ Terminal: XTerm }, { FitAddon }, { WebLinksAddon }] = await Promise.all([
       import("@xterm/xterm"),
       import("@xterm/addon-fit"),
+      import("@xterm/addon-web-links"),
     ]);
 
     const terminal = new XTerm(createTerminalOptions(LOGIN_TERMINAL_FONT_FAMILY));
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
+    terminal.loadAddon(new WebLinksAddon((_event, url) => {
+      if (/^https?:\/\//i.test(url)) window.open(url, "_blank", "noopener,noreferrer");
+    }));
     terminal.open(containerRef.current);
     const osc52ClipboardHandler = installOsc52ClipboardHandler(terminal);
 
@@ -61,7 +65,11 @@ export default function AiAccountLoginTerminal({
       exitCode: number;
     }) => {
       if (isThisSession(event)) {
-        onExitRef.current(event.exitCode);
+        if (event.exitCode === 0) {
+          onExitRef.current(event.exitCode);
+        } else {
+          terminal.writeln(`\r\n\x1b[31mLogin exited with code ${event.exitCode}. Close this panel and try again.\x1b[0m`);
+        }
       }
     });
 

@@ -32,11 +32,23 @@ vi.mock("@xterm/addon-fit", () => ({
   },
 }));
 
+vi.mock("@xterm/addon-web-links", () => ({ WebLinksAddon: class {} }));
+
 vi.mock("@/lib/terminalMouseSelection", () => ({
   createTerminalOptions: () => ({}),
 }));
 
 describe("AiAccountLoginTerminal", () => {
+  it("keeps failed login sessions open so the error can be read", async () => {
+    const onExit = vi.fn();
+    render(<AiAccountLoginTerminal provider="codex" accountRoot="/tmp/account" onExit={onExit} />);
+    await waitFor(() => expect(window.kanvibeDesktop.onAiAccountLoginExit).toHaveBeenCalled());
+    const listener = vi.mocked(window.kanvibeDesktop.onAiAccountLoginExit!).mock.calls[0][0];
+    listener({ accountRoot: "/tmp/account", exitCode: 1 });
+    expect(onExit).not.toHaveBeenCalled();
+    listener({ accountRoot: "/tmp/account", exitCode: 0 });
+    expect(onExit).toHaveBeenCalledWith(0);
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     mockRegisterOscHandler.mockReturnValue({ dispose: mockDisposeOscHandler });

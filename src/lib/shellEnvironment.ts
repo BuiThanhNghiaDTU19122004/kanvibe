@@ -57,7 +57,7 @@ export function createLocalShellEnvironment(): Record<string, string> {
   const homeDirectory = process.env.HOME || os.homedir();
   const extraPath = process.platform === "darwin"
     ? [...MAC_LOCAL_COMMAND_PATHS, ...getUserLocalCommandPaths(homeDirectory)].join(path.delimiter)
-    : "";
+    : getUserLocalCommandPaths(homeDirectory).join(path.delimiter);
 
   return {
     ...createSanitizedProcessEnvironment(),
