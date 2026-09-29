@@ -30,3 +30,16 @@ an existing build.
 References: [Codex authentication](https://learn.chatgpt.com/docs/auth),
 [Antigravity installation and authentication](https://antigravity.google/docs/cli/install/),
 [Gemini CLI migration](https://antigravity.google/docs/cli/gcli-migration/).
+
+## Windows launcher opens no window
+
+Run `Kan-vibe.cmd` (or `Mo-KanVibe.cmd`) from the checkout. The launcher uses its
+own directory, so a shortcut does not need a specific working directory.
+Launching again restores and focuses the existing KanVibe window.
+
+If WSLg reports a shared-memory failure and switches to COPY MODE, the app can
+run with an invisible window. The launcher now detects this and offers to restart
+WSL. Save other WSL work before selecting **R**: restarting closes all WSL apps
+and terminals. Select **N** to leave other work running. No database is deleted.
+
+This graphics problem is tracked in [Microsoft openvmm issue 4274](https://github.com/microsoft/openvmm/issues/4274).

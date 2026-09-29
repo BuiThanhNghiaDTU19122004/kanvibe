@@ -67,8 +67,14 @@ function main() {
     env: process.env,
   });
 
-  child.on("exit", (code) => {
-    process.exit(code ?? 0);
+  child.on("error", (error) => {
+    console.error("[kanvibe] Could not start Electron:", error.message);
+    process.exit(1);
+  });
+
+  child.on("exit", (code, signal) => {
+    if (signal) console.error(`[kanvibe] Electron stopped with signal ${signal}.`);
+    process.exit(code ?? 1);
   });
 }
 

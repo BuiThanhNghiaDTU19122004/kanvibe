@@ -1,0 +1,3 @@
+scripts/start-wsl.sh text eol=lf
+Mo-KanVibe.cmd text eol=crlf
+Kan-vibe.cmd text eol=crlf

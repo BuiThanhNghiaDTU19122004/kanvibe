@@ -10,6 +10,7 @@ const { pathToFileURL } = require("node:url");
 const { app, BrowserWindow, clipboard, ipcMain, session } = require("electron");
 const { createDesktopDiagnostics, resolveDesktopLogPath, serializeErrorForLog } = require("./diagnostics");
 const { applyAppDataDirectoryOverride } = require("./runtimeEnvironment");
+const { acquireSingleInstance } = require("./singleInstance");
 
 const DEFAULT_LOCALE = "ko";
 const RENDERER_DEV_URL = process.env.KANVIBE_RENDERER_URL || null;
@@ -1094,6 +1095,7 @@ async function createAppWindow(target = getRendererNavigationUrl()) {
   registerAppWindow(browserWindow);
 
   await loadRenderer(browserWindow, getRendererNavigationUrl(target));
+  focusWindow(browserWindow);
 
   return browserWindow;
 }
@@ -1102,7 +1104,7 @@ async function createMainWindow(target) {
   return createAppWindow(target);
 }
 
-app.whenReady().then(async () => {
+if (acquireSingleInstance(app, () => mainWindow, focusWindow)) app.whenReady().then(async () => {
   initializeDiagnostics();
   ensureRuntimeEnvironment();
   diagnostics.log("main:startup", {
