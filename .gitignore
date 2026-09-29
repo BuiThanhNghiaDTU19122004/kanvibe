@@ -63,4 +63,4 @@ next-env.d.ts
 /.review-resolve-loop/
 /needs-user.md
 
-.cmd
+*.cmd
