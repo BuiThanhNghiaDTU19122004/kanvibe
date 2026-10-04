@@ -26,7 +26,7 @@ import {
   getTaskAiSessions,
   getTaskAiSessionDetail,
   getTaskCodexHooksStatus,
-  getTaskGeminiHooksStatus,
+  getTaskAntigravityHooksStatus,
   getTaskHooksStatus,
   getTaskOpenCodeHooksStatus,
   getAllProjects,
@@ -91,7 +91,7 @@ const INLINE_CHAT_SESSION_LIMIT = 20;
 
 const AGENT_TAG_STYLES: Record<string, string> = {
   claude: "bg-tag-claude-bg text-tag-claude-text",
-  gemini: "bg-tag-gemini-bg text-tag-gemini-text",
+  antigravity: "bg-tag-antigravity-bg text-tag-antigravity-text",
   codex: "bg-tag-codex-bg text-tag-codex-text",
 };
 
@@ -161,7 +161,7 @@ interface TaskDetailState {
   task: NonNullable<Awaited<ReturnType<typeof getTaskById>>>;
   baseBranchTaskId: string | null;
   claudeHooksStatus: Awaited<ReturnType<typeof getTaskHooksStatus>>;
-  geminiHooksStatus: Awaited<ReturnType<typeof getTaskGeminiHooksStatus>>;
+  antigravityHooksStatus: Awaited<ReturnType<typeof getTaskAntigravityHooksStatus>>;
   codexHooksStatus: Awaited<ReturnType<typeof getTaskCodexHooksStatus>>;
   openCodeHooksStatus: Awaited<ReturnType<typeof getTaskOpenCodeHooksStatus>>;
   projects: Awaited<ReturnType<typeof getAllProjects>>;
@@ -182,7 +182,7 @@ interface NormalizedTaskDetailRouteCache {
 const DEFAULT_DETAIL_STATE: Omit<TaskDetailState, "task"> = {
   baseBranchTaskId: null,
   claudeHooksStatus: null,
-  geminiHooksStatus: null,
+  antigravityHooksStatus: null,
   codexHooksStatus: null,
   openCodeHooksStatus: null,
   projects: [],
@@ -233,24 +233,24 @@ function normalizeCachedTaskDetailRouteCache(cachedRoute: TaskDetailRouteCache |
 
 const AI_SESSION_PROVIDER_STYLES: Record<AggregatedAiSession["provider"], string> = {
   claude: "border-tag-claude-text/30 bg-tag-claude-bg text-tag-claude-text",
-  gemini: "border-tag-gemini-text/30 bg-tag-gemini-bg text-tag-gemini-text",
+  antigravity: "border-tag-antigravity-text/30 bg-tag-antigravity-bg text-tag-antigravity-text",
   codex: "border-tag-codex-text/30 bg-tag-codex-bg text-tag-codex-text",
   opencode: "border-tag-neutral-text/30 bg-tag-neutral-bg text-tag-neutral-text",
 };
 
 const AI_SESSION_PROVIDER_ICON_STYLES: Record<AggregatedAiSession["provider"], string> = {
   claude: "border-tag-claude-text/40 bg-tag-claude-bg text-tag-claude-text",
-  gemini: "border-tag-gemini-text/40 bg-tag-gemini-bg text-tag-gemini-text",
+  antigravity: "border-tag-antigravity-text/40 bg-tag-antigravity-bg text-tag-antigravity-text",
   codex: "border-tag-codex-text/40 bg-tag-codex-bg text-tag-codex-text",
   opencode: "border-tag-neutral-text/40 bg-tag-neutral-bg text-tag-neutral-text",
 };
 
-const AI_SESSION_PROVIDER_ORDER: AggregatedAiSession["provider"][] = ["claude", "opencode", "gemini", "codex"];
+const AI_SESSION_PROVIDER_ORDER: AggregatedAiSession["provider"][] = ["claude", "opencode", "antigravity", "codex"];
 
 const AI_SESSION_PROVIDER_META: Record<AggregatedAiSession["provider"], { label: string }> = {
   claude: { label: "Claude" },
   opencode: { label: "OpenCode" },
-  gemini: { label: "Gemini" },
+  antigravity: { label: "Antigravity" },
   codex: { label: "Codex" },
 };
 
@@ -303,7 +303,7 @@ function InlineAiChatView({ taskId }: { taskId: string }) {
       claude: 0,
       codex: 0,
       opencode: 0,
-      gemini: 0,
+      antigravity: 0,
     };
     for (const session of history?.sessions ?? []) {
       counts[session.provider] += 1;
@@ -998,8 +998,8 @@ export default function TaskDetailRoute() {
         renderIcon: () => (
           <HugeiconsIcon
             icon={InformationCircleIcon}
-            size={17}
-            strokeWidth={1.6}
+            size={19}
+            strokeWidth={1.8}
             aria-hidden="true"
           />
         ),
@@ -1019,8 +1019,8 @@ export default function TaskDetailRoute() {
         renderIcon: () => (
           <HugeiconsIcon
             icon={Chatting01Icon}
-            size={17}
-            strokeWidth={1.6}
+            size={19}
+            strokeWidth={1.8}
             aria-hidden="true"
           />
         ),
@@ -1033,8 +1033,8 @@ export default function TaskDetailRoute() {
         renderIcon: () => (
           <HugeiconsIcon
             icon={Activity03Icon}
-            size={17}
-            strokeWidth={1.6}
+            size={19}
+            strokeWidth={1.8}
             aria-hidden="true"
           />
         ),
@@ -1061,8 +1061,8 @@ export default function TaskDetailRoute() {
       renderIcon: () => (
         <HugeiconsIcon
           icon={SourceCodeIcon}
-          size={17}
-          strokeWidth={1.6}
+          size={19}
+          strokeWidth={1.8}
           aria-hidden="true"
         />
       ),
@@ -1507,16 +1507,16 @@ export default function TaskDetailRoute() {
 
         void (async () => {
           try {
-            const [claudeHooksStatus, geminiHooksStatus, codexHooksStatus, openCodeHooksStatus] = await Promise.all([
+            const [claudeHooksStatus, antigravityHooksStatus, codexHooksStatus, openCodeHooksStatus] = await Promise.all([
               task.projectId ? getTaskHooksStatus(id) : Promise.resolve(null),
-              task.projectId ? getTaskGeminiHooksStatus(id) : Promise.resolve(null),
+              task.projectId ? getTaskAntigravityHooksStatus(id) : Promise.resolve(null),
               task.projectId ? getTaskCodexHooksStatus(id) : Promise.resolve(null),
               task.projectId ? getTaskOpenCodeHooksStatus(id) : Promise.resolve(null),
             ]);
 
             applySupplementalState({
               claudeHooksStatus,
-              geminiHooksStatus,
+              antigravityHooksStatus,
               codexHooksStatus,
               openCodeHooksStatus,
             });
@@ -1789,7 +1789,7 @@ export default function TaskDetailRoute() {
               <HooksStatusCard
                 taskId={state.task.id}
                 initialClaudeStatus={state.claudeHooksStatus}
-                initialGeminiStatus={state.geminiHooksStatus}
+                initialAntigravityStatus={state.antigravityHooksStatus}
                 initialCodexStatus={state.codexHooksStatus}
                 initialOpenCodeStatus={state.openCodeHooksStatus}
                 isRemote={!!state.task.sshHost}
@@ -1798,7 +1798,7 @@ export default function TaskDetailRoute() {
                     ? {
                         ...current,
                         claudeHooksStatus: updates.claudeStatus !== undefined ? updates.claudeStatus : current.claudeHooksStatus,
-                        geminiHooksStatus: updates.geminiStatus !== undefined ? updates.geminiStatus : current.geminiHooksStatus,
+                        antigravityHooksStatus: updates.antigravityStatus !== undefined ? updates.antigravityStatus : current.antigravityHooksStatus,
                         codexHooksStatus: updates.codexStatus !== undefined ? updates.codexStatus : current.codexHooksStatus,
                         openCodeHooksStatus: updates.openCodeStatus !== undefined ? updates.openCodeStatus : current.openCodeHooksStatus,
                       }

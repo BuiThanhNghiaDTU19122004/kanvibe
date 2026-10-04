@@ -41,7 +41,7 @@ declare global {
         accountRoot: string,
         cols: number,
         rows: number,
-      ) => Promise<{ ok: boolean; error?: string }>;
+      ) => Promise<{ ok: boolean; authenticated?: boolean; error?: string }>;
       writeAiAccountLogin?: (accountRoot: string, data: string) => void;
       resizeAiAccountLogin?: (accountRoot: string, cols: number, rows: number) => void;
       closeAiAccountLogin?: (accountRoot: string) => void;
@@ -64,6 +64,7 @@ declare global {
       onNotificationActivated?: (listener: (notification: AppNotification) => void) => () => void;
       onNotificationShortcut?: (listener: () => void) => () => void;
       onCommandPaletteShortcut?: (listener: () => void) => () => void;
+      updateTitleBarOverlay?: (resolvedTheme: string) => void;
     };
   }
 }

@@ -45,7 +45,7 @@ interface TaskCardProps {
 
 const agentTagColors: Record<string, string> = {
   claude: "bg-tag-claude-bg text-tag-claude-text",
-  gemini: "bg-tag-gemini-bg text-tag-gemini-text",
+  antigravity: "bg-tag-antigravity-bg text-tag-antigravity-text",
   codex: "bg-tag-codex-bg text-tag-codex-text",
 };
 
@@ -76,8 +76,8 @@ const TASK_CARD_SELECTOR = "[data-kanban-task-card='true']";
 function CrownIcon() {
   return (
     <svg
-      width="12"
-      height="12"
+      width="13"
+      height="13"
       viewBox="0 0 16 16"
       fill="none"
       aria-hidden="true"
@@ -92,7 +92,7 @@ function CrownIcon() {
   );
 }
 
-function BellIcon({ size = 11 }: { size?: number }) {
+function BellIcon({ size = 13 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -111,7 +111,7 @@ function BellIcon({ size = 11 }: { size?: number }) {
   );
 }
 
-function PullRequestIcon({ size = 12 }: { size?: number }) {
+function PullRequestIcon({ size = 14 }: { size?: number }) {
   return (
     <svg
       width={size}

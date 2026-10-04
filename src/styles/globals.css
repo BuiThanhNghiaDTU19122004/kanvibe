@@ -105,8 +105,8 @@
   /* Semantic: Tags - Agent */
   --color-tag-claude-bg: var(--red-50);
   --color-tag-claude-text: var(--red-600);
-  --color-tag-gemini-bg: var(--blue-50);
-  --color-tag-gemini-text: var(--blue-600);
+  --color-tag-antigravity-bg: var(--blue-50);
+  --color-tag-antigravity-text: var(--blue-600);
   --color-tag-codex-bg: var(--green-50);
   --color-tag-codex-text: var(--green-600);
   --color-tag-session-bg: var(--color-button-neutral);
@@ -132,7 +132,7 @@
   --color-agent-claude: #D97757;
   --color-agent-codex: #5EC8D8;
   --color-agent-opencode: #A78BFA;
-  --color-agent-gemini: #4285F4;
+  --color-agent-antigravity: #4285F4;
 
   /* Semantic: Project Group (pastel) */
   --color-group-0-border: #F9A8D4;
@@ -236,8 +236,8 @@
 
   --color-tag-claude-bg: rgba(255, 125, 115, 0.12);
   --color-tag-claude-text: #ffaaa2;
-  --color-tag-gemini-bg: rgba(110, 168, 255, 0.12);
-  --color-tag-gemini-text: #9fc8ff;
+  --color-tag-antigravity-bg: rgba(110, 168, 255, 0.12);
+  --color-tag-antigravity-text: #9fc8ff;
   --color-tag-codex-bg: rgba(101, 208, 138, 0.12);
   --color-tag-codex-text: #9be6b4;
   --color-tag-session-bg: #ffffff;
@@ -342,6 +342,207 @@
   --shadow-kanban-task-focus: 0 0 0 1px var(--color-border-brand), 0 0 0 5px rgba(0, 100, 255, 0.18), 0 12px 28px rgba(0, 100, 255, 0.22);
 }
 
+:root[data-theme="dracula"] {
+  --color-brand-primary: #bd93f9;
+  --color-brand-hover: #d1b3fb;
+  --color-brand-active: #9b65e8;
+  --color-brand-subtle: rgba(189, 147, 249, 0.16);
+  --color-brand-muted: rgba(189, 147, 249, 0.24);
+  --color-button-neutral: #44475a;
+  --color-button-neutral-hover: #565a75;
+  --color-button-neutral-active: #3a3c4d;
+  --color-button-neutral-subtle: rgba(68, 71, 90, 0.3);
+
+  --color-bg-page: #21222c;
+  --color-bg-surface: #282a36;
+  --color-bg-overlay: rgba(19, 20, 26, 0.7);
+
+  --color-text-primary: #f8f8f2;
+  --color-text-secondary: #c5c8d4;
+  --color-text-muted: #6272a4;
+  --color-text-inverse: #282a36;
+  --color-text-brand: #bd93f9;
+  --color-text-link: #8be9fd;
+
+  --color-border-default: #44475a;
+  --color-border-subtle: #343746;
+  --color-border-strong: #6272a4;
+  --color-border-brand: #bd93f9;
+
+  --color-status-todo: #6272a4;
+  --color-status-progress: #ffb86c;
+  --color-status-pending: #ff79c6;
+  --color-status-review: #8be9fd;
+  --color-status-done: #50fa7b;
+  --color-status-success: #50fa7b;
+  --color-status-warning: #f1fa8c;
+  --color-status-error: #ff5555;
+  --color-status-info: #8be9fd;
+
+  --color-tag-project-bg: #44475a;
+  --color-tag-project-text: #f8f8f2;
+  --color-tag-pr-bg: rgba(139, 233, 253, 0.15);
+  --color-tag-pr-text: #8be9fd;
+  --color-tag-session-bg: #44475a;
+  --color-tag-session-text: #f8f8f2;
+  --color-tag-ssh-bg: rgba(80, 250, 123, 0.16);
+  --color-tag-ssh-text: #50fa7b;
+  --color-tag-branch-bg: rgba(255, 255, 255, 0.06);
+  --color-tag-branch-text: #c5c8d4;
+  --color-tag-neutral-bg: rgba(255, 255, 255, 0.08);
+  --color-tag-neutral-text: #c5c8d4;
+  --color-tag-base-bg: #44475a;
+  --color-tag-base-text: #f8f8f2;
+  --color-group-line: #44475a;
+
+  --color-priority-low-bg: rgba(189, 147, 249, 0.16);
+  --color-priority-low-text: #bd93f9;
+  --color-priority-medium-bg: rgba(255, 184, 108, 0.16);
+  --color-priority-medium-text: #ffb86c;
+  --color-priority-high-bg: rgba(255, 85, 85, 0.16);
+  --color-priority-high-text: #ff5555;
+
+  --color-terminal-chrome: #1e1f29;
+  --color-terminal-bg: #282a36;
+  --color-terminal-text: #f8f8f2;
+
+  --shadow-kanban-task-focus: 0 0 0 1px #bd93f9, 0 0 0 5px rgba(189, 147, 249, 0.35), 0 16px 36px rgba(189, 147, 249, 0.3);
+}
+
+:root[data-theme="one-dark"] {
+  --color-brand-primary: #61afef;
+  --color-brand-hover: #7fc3f7;
+  --color-brand-active: #4a9cd6;
+  --color-brand-subtle: rgba(97, 175, 239, 0.16);
+  --color-brand-muted: rgba(97, 175, 239, 0.24);
+  --color-button-neutral: #3b4048;
+  --color-button-neutral-hover: #484e59;
+  --color-button-neutral-active: #31353c;
+  --color-button-neutral-subtle: rgba(59, 64, 72, 0.3);
+
+  --color-bg-page: #1e2227;
+  --color-bg-surface: #282c34;
+  --color-bg-overlay: rgba(18, 20, 24, 0.7);
+
+  --color-text-primary: #abb2bf;
+  --color-text-secondary: #828997;
+  --color-text-muted: #5c6370;
+  --color-text-inverse: #21252b;
+  --color-text-brand: #61afef;
+  --color-text-link: #61afef;
+
+  --color-border-default: #3b4048;
+  --color-border-subtle: #2d3139;
+  --color-border-strong: #4b5263;
+  --color-border-brand: #61afef;
+
+  --color-status-todo: #5c6370;
+  --color-status-progress: #e5c07b;
+  --color-status-pending: #c678dd;
+  --color-status-review: #61afef;
+  --color-status-done: #98c379;
+  --color-status-success: #98c379;
+  --color-status-warning: #d19a66;
+  --color-status-error: #e06c75;
+  --color-status-info: #56b6c2;
+
+  --color-tag-project-bg: #3b4048;
+  --color-tag-project-text: #abb2bf;
+  --color-tag-pr-bg: rgba(97, 175, 239, 0.15);
+  --color-tag-pr-text: #61afef;
+  --color-tag-session-bg: #3b4048;
+  --color-tag-session-text: #abb2bf;
+  --color-tag-ssh-bg: rgba(152, 195, 121, 0.16);
+  --color-tag-ssh-text: #98c379;
+  --color-tag-branch-bg: rgba(255, 255, 255, 0.05);
+  --color-tag-branch-text: #828997;
+  --color-tag-neutral-bg: rgba(255, 255, 255, 0.06);
+  --color-tag-neutral-text: #828997;
+  --color-tag-base-bg: #3b4048;
+  --color-tag-base-text: #abb2bf;
+  --color-group-line: #3b4048;
+
+  --color-priority-low-bg: rgba(97, 175, 239, 0.16);
+  --color-priority-low-text: #61afef;
+  --color-priority-medium-bg: rgba(229, 192, 123, 0.16);
+  --color-priority-medium-text: #e5c07b;
+  --color-priority-high-bg: rgba(224, 108, 117, 0.16);
+  --color-priority-high-text: #e06c75;
+
+  --color-terminal-chrome: #1b1d23;
+  --color-terminal-bg: #21252b;
+  --color-terminal-text: #abb2bf;
+
+  --shadow-kanban-task-focus: 0 0 0 1px #61afef, 0 0 0 5px rgba(97, 175, 239, 0.35), 0 16px 36px rgba(97, 175, 239, 0.3);
+}
+
+:root[data-theme="catppuccin-mocha"] {
+  --color-brand-primary: #cba6f7;
+  --color-brand-hover: #dec4fa;
+  --color-brand-active: #b88aee;
+  --color-brand-subtle: rgba(203, 166, 247, 0.16);
+  --color-brand-muted: rgba(203, 166, 247, 0.24);
+  --color-button-neutral: #313244;
+  --color-button-neutral-hover: #45475a;
+  --color-button-neutral-active: #262738;
+  --color-button-neutral-subtle: rgba(49, 50, 68, 0.3);
+
+  --color-bg-page: #181825;
+  --color-bg-surface: #1e1e2e;
+  --color-bg-overlay: rgba(17, 17, 27, 0.7);
+
+  --color-text-primary: #cdd6f4;
+  --color-text-secondary: #a6adc8;
+  --color-text-muted: #6c7086;
+  --color-text-inverse: #11111b;
+  --color-text-brand: #cba6f7;
+  --color-text-link: #89b4fa;
+
+  --color-border-default: #313244;
+  --color-border-subtle: #262738;
+  --color-border-strong: #45475a;
+  --color-border-brand: #cba6f7;
+
+  --color-status-todo: #6c7086;
+  --color-status-progress: #f9e2af;
+  --color-status-pending: #f5c2e7;
+  --color-status-review: #89b4fa;
+  --color-status-done: #a6e3a1;
+  --color-status-success: #a6e3a1;
+  --color-status-warning: #fab387;
+  --color-status-error: #f38ba8;
+  --color-status-info: #89dceb;
+
+  --color-tag-project-bg: #313244;
+  --color-tag-project-text: #cdd6f4;
+  --color-tag-pr-bg: rgba(137, 180, 250, 0.15);
+  --color-tag-pr-text: #89b4fa;
+  --color-tag-session-bg: #313244;
+  --color-tag-session-text: #cdd6f4;
+  --color-tag-ssh-bg: rgba(166, 227, 161, 0.16);
+  --color-tag-ssh-text: #a6e3a1;
+  --color-tag-branch-bg: rgba(255, 255, 255, 0.05);
+  --color-tag-branch-text: #a6adc8;
+  --color-tag-neutral-bg: rgba(255, 255, 255, 0.07);
+  --color-tag-neutral-text: #a6adc8;
+  --color-tag-base-bg: #313244;
+  --color-tag-base-text: #cdd6f4;
+  --color-group-line: #313244;
+
+  --color-priority-low-bg: rgba(203, 166, 247, 0.16);
+  --color-priority-low-text: #cba6f7;
+  --color-priority-medium-bg: rgba(249, 226, 175, 0.16);
+  --color-priority-medium-text: #f9e2af;
+  --color-priority-high-bg: rgba(243, 139, 168, 0.16);
+  --color-priority-high-text: #f38ba8;
+
+  --color-terminal-chrome: #14141e;
+  --color-terminal-bg: #1e1e2e;
+  --color-terminal-text: #cdd6f4;
+
+  --shadow-kanban-task-focus: 0 0 0 1px #cba6f7, 0 0 0 5px rgba(203, 166, 247, 0.35), 0 16px 36px rgba(203, 166, 247, 0.3);
+}
+
 @theme inline {
   /* Brand */
   --color-brand-primary: var(--color-brand-primary);
@@ -387,8 +588,8 @@
   /* Tags */
   --color-tag-claude-bg: var(--color-tag-claude-bg);
   --color-tag-claude-text: var(--color-tag-claude-text);
-  --color-tag-gemini-bg: var(--color-tag-gemini-bg);
-  --color-tag-gemini-text: var(--color-tag-gemini-text);
+  --color-tag-antigravity-bg: var(--color-tag-antigravity-bg);
+  --color-tag-antigravity-text: var(--color-tag-antigravity-text);
   --color-tag-codex-bg: var(--color-tag-codex-bg);
   --color-tag-codex-text: var(--color-tag-codex-text);
   --color-tag-session-bg: var(--color-tag-session-bg);
@@ -456,7 +657,7 @@
   --shadow-lg: var(--shadow-lg);
 
   /* Font */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans CJK KR', 'Noto Sans CJK SC', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
 }
 
@@ -591,8 +792,8 @@ textarea {
   --kv-agent-color: var(--color-agent-opencode);
 }
 
-.kv-agent-rail[data-agent="gemini"] {
-  --kv-agent-color: var(--color-agent-gemini);
+.kv-agent-rail[data-agent="antigravity"] {
+  --kv-agent-color: var(--color-agent-antigravity);
 }
 
 /**

@@ -242,19 +242,33 @@ export default function ProjectSettings({
               <span className="text-sm text-text-primary">{t("themePreference")}</span>
               <p className="text-xs text-text-muted mt-0.5">{t("themePreferenceDescription")}</p>
             </div>
-            <div className="inline-flex rounded-md border border-border-default bg-bg-page p-0.5">
-              {(["system", "dark", "light"] as const).map((value) => (
+            <div className="flex flex-wrap items-center gap-1 rounded-md border border-border-default bg-bg-page p-1">
+              {[
+                { value: "system" as const, colorDot: undefined as string | undefined },
+                { value: "dark" as const, colorDot: "#090a0d" },
+                { value: "light" as const, colorDot: "#ffffff" },
+                { value: "dracula" as const, colorDot: "#bd93f9" },
+                { value: "one-dark" as const, colorDot: "#61afef" },
+                { value: "catppuccin-mocha" as const, colorDot: "#cba6f7" },
+              ].map(({ value, colorDot }) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => handleThemePreferenceChange(value)}
                   disabled={isPending}
-                  className={`rounded-[5px] px-2.5 py-1 text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 rounded-[5px] px-2.5 py-1 text-xs font-medium transition-colors ${
                     localThemePreference === value
                       ? "bg-bg-surface text-text-primary shadow-xs"
                       : "text-text-muted hover:text-text-primary"
                   }`}
                 >
+                  {colorDot ? (
+                    <span
+                      className="h-2 w-2 rounded-full border border-border-strong shrink-0"
+                      style={{ backgroundColor: colorDot }}
+                      aria-hidden="true"
+                    />
+                  ) : null}
                   {t(`theme.${value}`)}
                 </button>
               ))}

@@ -1088,7 +1088,7 @@ export default function Board({
           </button>
           <button
             onClick={openSettingsPage}
-            className="p-1.5 rounded-md border border-transparent text-text-muted transition-colors hover:border-border-default hover:bg-bg-page hover:text-text-primary"
+            className="p-1.5 rounded-md border border-transparent text-text-secondary transition-colors hover:border-border-default hover:bg-bg-page hover:text-text-primary"
             title={tc("settings")}
             aria-label={tc("settings")}
           >
