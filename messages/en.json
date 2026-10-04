@@ -71,6 +71,12 @@
     "title": "",
     "newTask": "+ New Task",
     "allProjects": "All Projects",
+    "emptyBoardTitle": "No tasks yet",
+    "emptyBoardDescription": "Create your first task with an AI coding agent or scan more Git repositories.",
+    "noProjectsTitle": "Welcome to KanVibe",
+    "noProjectsDescription": "Get started by scanning and registering a Git repository on this machine.",
+    "scanFirstProject": "Scan Git Repositories",
+    "scanMoreProjects": "Scan More Projects",
     "taskKindFilter": {
       "label": "Task type filter",
       "options": {
@@ -571,5 +577,30 @@
       "manual-logout-required": "This account cannot be signed out from the app, so it was only removed from the list."
     },
     "usageSection": "Usage"
+  },
+  "onboarding": {
+    "title": "Welcome to KanVibe",
+    "welcomeTitle": "Welcome to KanVibe",
+    "welcomeSubtitle": "Keyboard-first Kanban workspace for AI coding agents",
+    "step1Title": "1. Verify Environment & AI CLIs",
+    "step1Description": "KanVibe coordinates with your local coding tools and AI agents.",
+    "checkingTools": "Checking installed tools...",
+    "ready": "Ready",
+    "notDetected": "Not detected",
+    "continue": "Continue",
+    "skipStep": "Skip for now",
+    "step2Title": "2. Register Your First Project",
+    "step2Description": "Enter a folder path containing your Git repositories.",
+    "folderPathLabel": "Project Root Directory",
+    "scanButton": "Scan & Register",
+    "scanning": "Scanning...",
+    "scanTip": "KanVibe creates Git worktrees for each task so your agents can code in parallel without branch conflicts.",
+    "noGitReposFound": "No Git repositories found in this path.",
+    "scanFailed": "Failed to scan directory.",
+    "step3Title": "3. You are all set!",
+    "allSetTitle": "Ready to Vibe!",
+    "allSetDescription": "Your environment is ready. Start assigning tasks to Claude Code, Codex, or Antigravity agents.",
+    "allSetDescriptionWithProjects": "Successfully registered {count} projects. You can now create your first branch-based task.",
+    "getStartedButton": "Open Kanban Board"
   }
 }

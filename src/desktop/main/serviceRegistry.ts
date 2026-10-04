@@ -4,6 +4,7 @@ import * as appSettings from "@/desktop/main/services/appSettingsService";
 import { runBackgroundTaskSyncNow } from "@/desktop/main/services/backgroundTaskSyncService";
 import * as diff from "@/desktop/main/services/diffService";
 import * as editor from "@/desktop/main/services/editorService";
+import * as environmentCheck from "@/desktop/main/services/environmentCheckService";
 import * as githubCliDependency from "@/desktop/main/services/githubCliDependencyService";
 import * as hooks from "@/desktop/main/services/hookService";
 import * as kanban from "@/desktop/main/services/kanbanService";
@@ -22,6 +23,7 @@ export const desktopServices = {
   backgroundTaskSync,
   diff,
   editor,
+  environmentCheck,
   githubCliDependency,
   hooks,
   kanban,

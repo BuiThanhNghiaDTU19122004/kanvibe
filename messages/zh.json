@@ -70,6 +70,12 @@
     "title": "",
     "newTask": "+ 新任务",
     "allProjects": "所有项目",
+    "emptyBoardTitle": "暂无任务",
+    "emptyBoardDescription": "使用 AI 编程 Agent 创建您的第一个任务，或扫描更多 Git 仓库。",
+    "noProjectsTitle": "欢迎使用 KanVibe",
+    "noProjectsDescription": "首先扫描并注册本机上的 Git 仓库以开始使用。",
+    "scanFirstProject": "扫描 Git 仓库",
+    "scanMoreProjects": "扫描更多项目",
     "taskKindFilter": {
       "label": "任务类型筛选",
       "options": {
@@ -570,5 +576,30 @@
       "manual-logout-required": "该账号无法在应用内登出，因此仅从列表中移除。"
     },
     "usageSection": "用量"
+  },
+  "onboarding": {
+    "title": "欢迎使用 KanVibe",
+    "welcomeTitle": "欢迎使用 KanVibe",
+    "welcomeSubtitle": "专为 AI 编程 Agent 设计的键盘优先看板工作区",
+    "step1Title": "1. 验证环境与 AI CLI",
+    "step1Description": "KanVibe 与您本地的编程工具和 AI Agent 协同工作。",
+    "checkingTools": "正在检查已安装的工具...",
+    "ready": "就绪",
+    "notDetected": "未检测到",
+    "continue": "继续",
+    "skipStep": "暂且跳过",
+    "step2Title": "2. 注册您的第一个项目",
+    "step2Description": "请输入包含 Git 仓库的文件夹路径。",
+    "folderPathLabel": "项目根目录",
+    "scanButton": "扫描并注册",
+    "scanning": "正在扫描...",
+    "scanTip": "KanVibe 为每个任务创建独立的 Git worktree，以便您的 Agent 能够无分支冲突地并行编码。",
+    "noGitReposFound": "在此路径下未找到任何 Git 仓库。",
+    "scanFailed": "扫描目录失败。",
+    "step3Title": "3. 全部准备就绪！",
+    "allSetTitle": "准备开始！",
+    "allSetDescription": "环境已就绪。现在您可以指派任务给 Claude Code、Codex 或 Antigravity Agent。",
+    "allSetDescriptionWithProjects": "成功注册 {count} 个项目。现在可以创建您的第一个任务了。",
+    "getStartedButton": "打开看板"
   }
 }

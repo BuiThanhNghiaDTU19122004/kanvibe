@@ -13,6 +13,9 @@ import ProjectSelector from "./ProjectSelector";
 import TaskContextMenu from "./TaskContextMenu";
 import BranchTaskModal from "./BranchTaskModal";
 import DoneConfirmDialog from "./DoneConfirmDialog";
+import BoardEmptyState from "./BoardEmptyState";
+import FirstRunWizardDialog from "./FirstRunWizardDialog";
+import { getAppSetting } from "@/desktop/renderer/actions/appSettings";
 import { deleteTask, getMoreDoneTasks, moveTaskToColumn } from "@/desktop/renderer/actions/kanban";
 import type { TasksByStatus } from "@/desktop/renderer/actions/kanban";
 import { useBoardCommands } from "@/desktop/renderer/components/BoardCommandProvider";
@@ -379,6 +382,17 @@ export default function Board({
   const [pendingDoneResult, setPendingDoneResult] = useState<DropResult | null>(null);
   const [currentDefaultSessionType, setCurrentDefaultSessionType] = useState<SessionType>(defaultSessionType);
   const [shouldUseMacTitlebarLayout, setShouldUseMacTitlebarLayout] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      void getAppSetting("onboarding_completed").then((completed) => {
+        if (!completed) {
+          setIsOnboardingOpen(true);
+        }
+      });
+    }
+  }, [projects.length]);
   const [, startDragPersistenceTransition] = useTransition();
   const unreadNotificationCountByTask = useUnreadNotificationCountByTask();
   const notificationCenterRef = useRef<NotificationCenterButtonHandle>(null);
@@ -543,6 +557,11 @@ export default function Board({
 
     return sorted;
   }, [boardSortContext, filteredTasks, sortPreference]);
+
+  const totalTaskCount = useMemo(
+    () => Object.values(displayedTasks).reduce((sum, list) => sum + list.length, 0),
+    [displayedTasks],
+  );
 
   /**
    * git을 다시 돌릴 태스크. 지금 손대고 있는 칸만 새로 집계하고 나머지 칸은 마지막으로 저장된 값을 보여준다.
@@ -1103,8 +1122,15 @@ export default function Board({
 
       <main className={mainClassName}>
         {isMounted ? (
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="flex gap-3 overflow-x-auto pb-2">
+          totalTaskCount === 0 ? (
+            <BoardEmptyState
+              onNewTask={() => setIsModalOpen(true)}
+              onScanProjects={() => setIsProjectRegistryOpen(true)}
+              hasProjects={projects.length > 0}
+            />
+          ) : (
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="flex gap-3 overflow-x-auto pb-2">
               {COLUMNS.map((col) => (
                 <Column
                   key={col.status}
@@ -1131,6 +1157,7 @@ export default function Board({
               ))}
             </div>
           </DragDropContext>
+          )
         ) : (
           <div className="flex gap-4 overflow-x-auto">
             {COLUMNS.map((col) => (
@@ -1205,6 +1232,11 @@ export default function Board({
         isOpen={!!pendingDoneResult}
         onConfirm={handleDoneConfirm}
         onCancel={handleDoneCancel}
+      />
+
+      <FirstRunWizardDialog
+        isOpen={isOnboardingOpen}
+        onComplete={() => setIsOnboardingOpen(false)}
       />
     </div>
   );
