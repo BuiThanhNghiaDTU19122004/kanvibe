@@ -146,6 +146,16 @@
     "loadingMore": "Loading..."
   },
   "task": {
+    "taskTitle": "Task Title",
+    "taskTitlePlaceholder": "e.g. Implement authentication middleware",
+    "agentType": "AI Agent",
+    "agentNone": "None (Terminal only)",
+    "agentAutoStart": "Auto-start agent when terminal opens",
+    "promptLabel": "Agent Prompt / Description",
+    "promptPlaceholder": "Describe what you want the agent to build, test, or refactor... (Markdown supported)",
+    "autoBranchHint": "Auto-generated from title",
+    "branchOptions": "Branch options",
+    "startAgent": "Start {agent}",
     "descriptionLabel": "Description",
     "descriptionPlaceholder": "Task description (optional)",
     "project": "Project",

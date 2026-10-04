@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import CreateTaskModal from "../CreateTaskModal";
+import CreateTaskModal, { slugifyToBranchName } from "../CreateTaskModal";
 import type { Project } from "@/entities/Project";
 
 const { mockCreateTask, mockEnsureSessionDependencyWithPrompt, mockGetProjectBranches, mockPush } = vi.hoisted(() => ({
@@ -276,7 +276,8 @@ describe("CreateTaskModal", () => {
 
     const baseBranchInput = screen.getByLabelText("baseBranch");
     const branchNameInput = getBranchNameInput();
-    const descriptionInput = screen.getByPlaceholderText("descriptionPlaceholder");
+    const agentNoneButton = screen.getByRole("radio", { name: /agentNone/ });
+    const descriptionInput = screen.getByPlaceholderText("promptPlaceholder");
 
     // Then
     await waitFor(() => {
@@ -288,7 +289,13 @@ describe("CreateTaskModal", () => {
     expect(document.activeElement).toBe(branchNameInput);
 
     await user.tab();
+    expect(document.activeElement).toBe(agentNoneButton);
+
+    await user.tab();
     expect(document.activeElement).toBe(descriptionInput);
+
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(agentNoneButton);
 
     await user.tab({ shift: true });
     expect(document.activeElement).toBe(branchNameInput);
@@ -399,6 +406,118 @@ describe("CreateTaskModal", () => {
     // Then
     await waitFor(() => {
       expect(screen.getByTestId("branch-search-input").textContent).toBe("develop");
+    });
+  });
+
+  describe("Smart Task Creator (slugify, title, agent selection)", () => {
+    it("slugifyToBranchName은 특수문자와 공백을 올바른 브랜치명으로 변환한다", () => {
+      expect(slugifyToBranchName("Add JWT Auth API")).toBe("feat/add-jwt-auth-api");
+      expect(slugifyToBranchName("Fix: CORS error on /api/v1!")).toBe("feat/fix-cors-error-on-apiv1");
+      expect(slugifyToBranchName("   multiple   spaces   ")).toBe("feat/multiple-spaces");
+      expect(slugifyToBranchName("", "feat/")).toBe("");
+    });
+
+    it("작업 제목을 입력하면 브랜치 이름이 자동으로 slugify되어 채워진다", async () => {
+      render(
+        <CreateTaskModal
+          isOpen
+          onClose={vi.fn()}
+          sshHosts={["remote-box"]}
+          projects={[createProject()]}
+          defaultProjectId="project-remote"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(mockGetProjectBranches).toHaveBeenCalledWith("project-remote");
+      });
+
+      const titleInput = screen.getByPlaceholderText("taskTitlePlaceholder") as HTMLInputElement;
+      const branchNameInput = getBranchNameInput();
+
+      fireEvent.change(titleInput, { target: { value: "Implement OAuth2 login" } });
+      expect(branchNameInput.value).toBe("feat/implement-oauth2-login");
+    });
+
+    it("사용자가 브랜치 이름을 직접 수정한 후에는 제목을 바꿔도 브랜치 이름이 덮어써지지 않는다", async () => {
+      render(
+        <CreateTaskModal
+          isOpen
+          onClose={vi.fn()}
+          sshHosts={["remote-box"]}
+          projects={[createProject()]}
+          defaultProjectId="project-remote"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(mockGetProjectBranches).toHaveBeenCalledWith("project-remote");
+      });
+
+      const titleInput = screen.getByPlaceholderText("taskTitlePlaceholder") as HTMLInputElement;
+      const branchNameInput = getBranchNameInput();
+
+      // First type title -> branchName auto updates
+      fireEvent.change(titleInput, { target: { value: "Initial Title" } });
+      expect(branchNameInput.value).toBe("feat/initial-title");
+
+      // Manually edit branch name
+      fireEvent.change(branchNameInput, { target: { value: "custom/my-branch" } });
+      expect(branchNameInput.value).toBe("custom/my-branch");
+
+      // Change title again -> branch name must stay customized
+      fireEvent.change(titleInput, { target: { value: "Updated Title" } });
+      expect(branchNameInput.value).toBe("custom/my-branch");
+    });
+
+    it("AI 에이전트를 선택하고 작업을 생성하면 agentType과 autostart 쿼리 파라미터가 적용된다", async () => {
+      const onClose = vi.fn();
+      mockCreateTask.mockResolvedValue({ id: "task-agent-test" });
+
+      render(
+        <CreateTaskModal
+          isOpen
+          onClose={onClose}
+          sshHosts={["remote-box"]}
+          projects={[createProject()]}
+          defaultProjectId="project-remote"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(mockGetProjectBranches).toHaveBeenCalledWith("project-remote");
+      });
+
+      // Type title and prompt
+      const titleInput = screen.getByPlaceholderText("taskTitlePlaceholder");
+      fireEvent.change(titleInput, { target: { value: "Fix auth token expiration" } });
+
+      const promptInput = screen.getByPlaceholderText("promptPlaceholder");
+      fireEvent.change(promptInput, { target: { value: "Check refresh token handler" } });
+
+      // Click Claude agent button
+      const claudeButton = screen.getByRole("radio", { name: /Claude/ });
+      fireEvent.click(claudeButton);
+
+      // Submit
+      fireEvent.click(screen.getByRole("button", { name: "create" }));
+
+      await waitFor(() => {
+        expect(mockCreateTask).toHaveBeenCalledWith({
+          title: "Fix auth token expiration",
+          description: "Check refresh token handler",
+          branchName: "feat/fix-auth-token-expiration",
+          baseBranch: "main",
+          sessionType: "tmux",
+          sshHost: undefined,
+          projectId: "project-remote",
+          priority: undefined,
+          agentType: "claude",
+        });
+      });
+
+      expect(onClose).toHaveBeenCalled();
+      expect(mockPush).toHaveBeenCalledWith("/ko/task/task-agent-test?autostart=1");
     });
   });
 });

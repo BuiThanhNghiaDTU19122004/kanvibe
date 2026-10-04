@@ -14,7 +14,7 @@ import CreateTaskModal from "@/components/CreateTaskModal";
 import DeleteTaskButton from "@/components/DeleteTaskButton";
 import DoneStatusButton from "@/components/DoneStatusButton";
 import HooksStatusCard from "@/components/HooksStatusCard";
-import { AiProviderIcon } from "@/components/AiProviderIcon";
+import { AiProviderIcon, type AiProviderIconName } from "@/components/AiProviderIcon";
 import NotificationCenterButton, { type NotificationCenterButtonHandle } from "@/components/NotificationCenterButton";
 import ProjectIcon from "@/components/ProjectIcon";
 import TaskDetailInfoCard from "@/components/TaskDetailInfoCard";
@@ -1570,6 +1570,33 @@ export default function TaskDetailRoute() {
     closeDetailPanel();
   }, { enabled: visiblePanel !== null });
 
+  const launchAgentInTerminal = useCallback(() => {
+    if (!state?.task.agentType) return;
+    const agentCli = state.task.agentType === "antigravity" ? "agy" : state.task.agentType;
+    let command = agentCli;
+    if (state.task.description && state.task.description.trim()) {
+      const singleLine = state.task.description.trim().replace(/"/g, '\\"').replace(/\r?\n/g, " ");
+      command = `${agentCli} "${singleLine}"`;
+    }
+    const activeTabId = terminalTabs.activeTab?.id ?? null;
+    window.kanvibeDesktop?.writeTerminal(state.task.id, activeTabId, `${command}\r`);
+  }, [state?.task.agentType, state?.task.description, state?.task.id, terminalTabs.activeTab?.id]);
+
+  const autoStartTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (autoStartTriggeredRef.current || !state?.task.agentType || !hasTerminal) {
+      return;
+    }
+    const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    if (searchParams?.get("autostart") === "1") {
+      autoStartTriggeredRef.current = true;
+      const timer = setTimeout(() => {
+        launchAgentInTerminal();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasTerminal, launchAgentInTerminal, state?.task.agentType]);
+
   if (state === undefined) {
     return <div className="min-h-screen flex items-center justify-center bg-bg-page text-text-muted">Loading...</div>;
   }
@@ -1857,6 +1884,17 @@ export default function TaskDetailRoute() {
                 />
               ) : (
                 <span className="text-xs text-terminal-text font-mono truncate">{state.task.sessionName ?? t("terminal")}</span>
+              )}
+              {state.task.agentType && (
+                <button
+                  type="button"
+                  onClick={launchAgentInTerminal}
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-brand-primary/20 hover:bg-brand-primary/30 border border-brand-primary/40 text-text-primary text-xs font-medium transition-colors cursor-pointer select-none"
+                  title={`Launch ${state.task.agentType} in terminal`}
+                >
+                  <AiProviderIcon provider={state.task.agentType as AiProviderIconName} size={14} />
+                  <span>{t("startAgent", { agent: state.task.agentType.charAt(0).toUpperCase() + state.task.agentType.slice(1) })}</span>
+                </button>
               )}
               <div className="ml-auto">
                 <NotificationCenterButton ref={notificationCenterRef} buttonClassName="text-terminal-text hover:text-white hover:bg-white/10" panelClassName="mt-3" />

@@ -508,6 +508,7 @@ export interface CreateTaskInput {
   sshHost?: string;
   projectId?: string;
   priority?: TaskPriority;
+  agentType?: string;
 }
 
 /** 새 작업을 생성한다. branchName + projectId가 있으면 worktree와 세션도 함께 생성한다 */
@@ -523,6 +524,7 @@ export async function createTask(input: CreateTaskInput): Promise<KanbanTask> {
     sshHost: input.sshHost || null,
     projectId: input.projectId || null,
     priority: input.priority || null,
+    agentType: input.agentType || null,
     status: TaskStatus.TODO,
   });
 
@@ -598,7 +600,7 @@ export async function updateTaskStatus(
 /** 작업의 정보를 부분 업데이트한다 */
 export async function updateTask(
   taskId: string,
-  updates: Partial<Pick<KanbanTask, "title" | "description" | "priority">>
+  updates: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "agentType">>,
 ): Promise<KanbanTask | null> {
   const repo = await getTaskRepository();
   const task = await repo.findOneBy({ id: taskId });
@@ -607,6 +609,7 @@ export async function updateTask(
   if (updates.title !== undefined) task.title = updates.title;
   if (updates.description !== undefined) task.description = updates.description;
   if (updates.priority !== undefined) task.priority = updates.priority;
+  if (updates.agentType !== undefined) task.agentType = updates.agentType;
 
   const saved = await repo.save(task);
 

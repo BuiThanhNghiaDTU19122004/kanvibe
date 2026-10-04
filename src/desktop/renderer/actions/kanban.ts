@@ -35,7 +35,7 @@ export function updateTaskStatus(taskId: string, newStatus: TaskStatus): Promise
 
 export function updateTask(
   taskId: string,
-  updates: Partial<Pick<KanbanTask, "title" | "description" | "priority">>,
+  updates: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "agentType">>,
 ): Promise<KanbanTask | null> {
   return invokeDesktop("kanban", "updateTask", taskId, updates);
 }

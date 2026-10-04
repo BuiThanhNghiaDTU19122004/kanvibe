@@ -145,6 +145,16 @@
     "loadingMore": "加载中..."
   },
   "task": {
+    "taskTitle": "任务标题",
+    "taskTitlePlaceholder": "例如：实现身份验证中间件",
+    "agentType": "AI 智能体",
+    "agentNone": "无（仅终端）",
+    "agentAutoStart": "打开终端时自动启动智能体",
+    "promptLabel": "智能体提示词 / 描述",
+    "promptPlaceholder": "描述希望智能体构建、测试或重构的内容...（支持 Markdown）",
+    "autoBranchHint": "根据标题自动生成",
+    "branchOptions": "分支选项",
+    "startAgent": "启动 {agent}",
     "descriptionLabel": "描述",
     "descriptionPlaceholder": "任务描述（可选）",
     "project": "项目",

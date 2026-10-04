@@ -5,6 +5,7 @@ interface NavigateToTaskDetailOptions {
   currentLocale?: string;
   navigate?: (href: string) => void;
   openInNewWindow?: boolean;
+  searchParams?: string;
 }
 
 interface TaskNavigationClickEvent {
@@ -25,8 +26,9 @@ export function shouldHandleTaskNavigationClick(event: TaskNavigationClickEvent)
   );
 }
 
-export function getTaskDetailHref(taskId: string, currentLocale?: string) {
-  return localizeHref(`/task/${taskId}`, currentLocale);
+export function getTaskDetailHref(taskId: string, currentLocale?: string, searchParams?: string) {
+  const query = searchParams ? (searchParams.startsWith("?") ? searchParams : `?${searchParams}`) : "";
+  return localizeHref(`/task/${taskId}${query}`, currentLocale);
 }
 
 export async function focusExistingTaskDetailWindow(taskId: string, currentLocale?: string) {
@@ -48,9 +50,10 @@ export async function navigateToTaskDetail(
     currentLocale,
     navigate = redirect,
     openInNewWindow = false,
+    searchParams,
   }: NavigateToTaskDetailOptions = {},
 ) {
-  const href = getTaskDetailHref(taskId, currentLocale);
+  const href = getTaskDetailHref(taskId, currentLocale, searchParams);
 
   if (openInNewWindow) {
     openInternalRouteInNewWindow(href);

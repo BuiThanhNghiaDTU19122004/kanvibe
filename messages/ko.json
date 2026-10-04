@@ -146,6 +146,16 @@
     "loadingMore": "불러오는 중..."
   },
   "task": {
+    "taskTitle": "작업 제목",
+    "taskTitlePlaceholder": "예: 인증 미들웨어 구현",
+    "agentType": "AI 에이전트",
+    "agentNone": "없음 (터미널 전용)",
+    "agentAutoStart": "터미널 열릴 때 에이전트 자동 시작",
+    "promptLabel": "에이전트 프롬프트 / 설명",
+    "promptPlaceholder": "에이전트가 개발·테스트·리팩터링할 내용을 입력하세요... (Markdown 지원)",
+    "autoBranchHint": "제목에서 자동 생성됨",
+    "branchOptions": "브랜치 설정",
+    "startAgent": "{agent} 시작",
     "descriptionLabel": "설명",
     "descriptionPlaceholder": "작업 설명 (선택)",
     "project": "프로젝트",
