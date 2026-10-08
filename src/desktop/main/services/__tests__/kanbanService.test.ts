@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as nodeFs from "node:fs";
+import * as nodeOs from "node:os";
+import * as nodePath from "node:path";
+import { execFileSync } from "node:child_process";
 
 const mocks = vi.hoisted(() => ({
   taskRepo: {
@@ -2595,11 +2599,6 @@ describe("kanbanService.updateTask", () => {
  * 실제 저장소 배치를 만들어 두고 `sh -c`로 돌려, 어느 디렉터리에서 gh가 실행되는지 확인한다.
  */
 describe("kanbanService gh 실행 셸 명령", () => {
-  const nodeFs = require("node:fs") as typeof import("node:fs");
-  const nodeOs = require("node:os") as typeof import("node:os");
-  const nodePath = require("node:path") as typeof import("node:path");
-  const { execFileSync } = require("node:child_process") as typeof import("node:child_process");
-
   let workspaceRoot = "";
 
   beforeEach(() => {
