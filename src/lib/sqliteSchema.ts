@@ -73,6 +73,15 @@ function ensureBaseTables(database: Database.Database): void {
       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS task_diff_stats (
+      task_id TEXT PRIMARY KEY NOT NULL,
+      file_count INTEGER NOT NULL DEFAULT 0,
+      additions INTEGER NOT NULL DEFAULT 0,
+      deletions INTEGER NOT NULL DEFAULT 0,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES kanban_tasks(id) ON DELETE CASCADE
+    );
+
   `);
 }
 
