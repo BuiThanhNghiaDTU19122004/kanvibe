@@ -19,11 +19,11 @@ describe("toAccountConfigDir", () => {
     expect(toAccountConfigDir(AI_PROVIDER_CONFIG_DIR_SPECS.codex, claudeRoot)).toBe(claudeRoot);
   });
 
-  it("Gemini는 GEMINI_CLI_HOME이 루트를 받으므로 그 아래 .gemini가 config dir다", () => {
-    const geminiRoot = path.join(FAKE_HOME, ".gemini-work");
+  it("Antigravity는 ANTIGRAVITY_CLI_HOME이 루트를 받으므로 그 아래 .antigravity가 config dir다", () => {
+    const antigravityRoot = path.join(FAKE_HOME, ".claude-work");
 
-    expect(toAccountConfigDir(AI_PROVIDER_CONFIG_DIR_SPECS.gemini, geminiRoot)).toBe(
-      path.join(geminiRoot, ".gemini"),
+    expect(toAccountConfigDir(AI_PROVIDER_CONFIG_DIR_SPECS.antigravity, antigravityRoot)).toBe(
+      antigravityRoot,
     );
   });
 });
@@ -38,22 +38,22 @@ describe("toDefaultAccountRoot", () => {
     );
   });
 
-  it("Gemini의 기본 루트는 홈 자체이고 config dir만 한 겹 아래다", () => {
-    const defaultRoot = toDefaultAccountRoot(AI_PROVIDER_CONFIG_DIR_SPECS.gemini, FAKE_HOME);
+  it("Antigravity의 기본 루트는 홈 자체이고 config dir만 한 겹 아래다", () => {
+    const defaultRoot = toDefaultAccountRoot(AI_PROVIDER_CONFIG_DIR_SPECS.antigravity, FAKE_HOME);
 
-    expect(defaultRoot).toBe(FAKE_HOME);
-    expect(toAccountConfigDir(AI_PROVIDER_CONFIG_DIR_SPECS.gemini, defaultRoot)).toBe(
-      path.join(FAKE_HOME, ".gemini"),
+    expect(defaultRoot).toBe(path.join(FAKE_HOME, ".gemini/antigravity-cli"));
+    expect(toAccountConfigDir(AI_PROVIDER_CONFIG_DIR_SPECS.antigravity, defaultRoot)).toBe(
+      path.join(FAKE_HOME, ".gemini/antigravity-cli"),
     );
   });
 });
 
 describe("계정 이름과 루트", () => {
   it("계정 이름으로 만든 루트에서 같은 이름을 되읽는다", () => {
-    const accountRoot = toNamedAccountRoot(AI_PROVIDER_CONFIG_DIR_SPECS.gemini, "work", FAKE_HOME);
+    const accountRoot = toNamedAccountRoot(AI_PROVIDER_CONFIG_DIR_SPECS.claude, "work", FAKE_HOME);
 
-    expect(accountRoot).toBe(path.join(FAKE_HOME, ".gemini-work"));
-    expect(toAccountNameFromRoot(AI_PROVIDER_CONFIG_DIR_SPECS.gemini, accountRoot)).toBe("work");
+    expect(accountRoot).toBe(path.join(FAKE_HOME, ".claude-work"));
+    expect(toAccountNameFromRoot(AI_PROVIDER_CONFIG_DIR_SPECS.claude, accountRoot)).toBe("work");
   });
 
   it("기본 루트에는 사용자가 붙인 이름이 없다", () => {
