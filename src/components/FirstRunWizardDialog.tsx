@@ -1,300 +1,111 @@
-"use client";
-
-import { useEffect, useState, useTransition } from "react";
+﻿"use client";
+import { useEffect, useState, useTransition, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
-import {
-  checkEnvironmentAction,
-  type CliToolCheckResult,
-} from "@/desktop/renderer/actions/environmentCheck";
+import { checkEnvironmentAction, type CliToolCheckResult } from "@/desktop/renderer/actions/environmentCheck";
 import { scanAndRegisterProjects } from "@/desktop/renderer/actions/project";
+import { listAiAccounts } from "@/desktop/renderer/actions/aiAccounts";
 import { setAppSetting } from "@/desktop/renderer/actions/appSettings";
+import { Link } from "@/desktop/renderer/navigation";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+import FolderSearchInput from "./FolderSearchInput";
+import LanguageSelector from "./LanguageSelector";
 
-interface FirstRunWizardDialogProps {
-  isOpen: boolean;
-  onComplete: () => void;
-}
+interface Props { isOpen: boolean; onComplete: () => void; onCreateTask?: () => void; projectCount?: number }
+export default function FirstRunWizardDialog(props: Props) { return props.isOpen ? <Wizard {...props} /> : null; }
 
-export default function FirstRunWizardDialog({
-  isOpen,
-  onComplete,
-}: FirstRunWizardDialogProps) {
+function Wizard({ onComplete, onCreateTask, projectCount = 0 }: Props) {
   const t = useTranslations("onboarding");
-  const tc = useTranslations("common");
-
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const tm = useTranslations("mvp");
+  const [step, setStep] = useState(1);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { dialogRef.current?.focus(); }, [step]);
   const [tools, setTools] = useState<CliToolCheckResult[]>([]);
-  const [isLoadingTools, setIsLoadingTools] = useState(true);
+  const [checking, setChecking] = useState(true);
+  const [checkError, setCheckError] = useState(false);
+  const [accountReady, setAccountReady] = useState(false);
   const [scanPath, setScanPath] = useState("");
-  const [isScanning, startScanTransition] = useTransition();
-  const [scanResultCount, setScanResultCount] = useState<number | null>(null);
+  const [projectReady, setProjectReady] = useState(projectCount > 0);
   const [scanError, setScanError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let isCancelled = false;
-    setIsLoadingTools(true);
-    checkEnvironmentAction()
-      .then((results) => {
-        if (!isCancelled) {
-          setTools(results);
-          setIsLoadingTools(false);
-        }
-      })
-      .catch(() => {
-        if (!isCancelled) {
-          setIsLoadingTools(false);
-        }
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  async function handleFinish() {
-    await setAppSetting("onboarding_completed", "true");
-    onComplete();
+  const [isScanning, startScanTransition] = useTransition();
+  const [finishing, setFinishing] = useState(false);
+  const load = useCallback(async () => {
+    setChecking(true); setCheckError(false);
+    try {
+      const [result, accounts] = await Promise.all([checkEnvironmentAction(), listAiAccounts()]);
+      setTools(result); setAccountReady(accounts.some((account) => account.provider === "claude" && account.accountName === null && account.isLoggedIn));
+    } catch { setCheckError(true); setAccountReady(false); }
+    finally { setChecking(false); }
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+  const toolsReady = ["git", "claude"].every((tool) => tools.some((item) => item.tool === tool && item.isInstalled))
+    && !tools.some((item) => item.tool === "git-bash" && !item.isInstalled);
+  const ready = toolsReady && accountReady && projectReady && !checkError;
+  async function finish(create = false) {
+    if (finishing || isScanning) return;
+    setFinishing(true);
+    try { await setAppSetting("onboarding_seen", "true"); if (create && onCreateTask) onCreateTask(); else onComplete(); }
+    catch { setScanError(tm("setupSaveFailed")); }
+    finally { setFinishing(false); }
   }
-
-  function handleScanProject() {
-    if (!scanPath.trim()) return;
+  useEscapeKey(() => { void finish(); }, { enabled: !isScanning && !finishing });
+  function scan() {
     setScanError(null);
-
     startScanTransition(async () => {
       try {
         const result = await scanAndRegisterProjects(scanPath.trim());
-        setScanResultCount(result.registered.length);
-        if (result.registered.length > 0) {
-          setStep(3);
-        } else {
-          setScanError(t("noGitReposFound"));
-        }
-      } catch (error) {
-        setScanError(error instanceof Error ? error.message : t("scanFailed"));
-      }
+        if (result.errors.length) setScanError(result.errors.join("\n"));
+        if (result.registered.length || result.skipped.length) { setProjectReady(true); if (!result.errors.length) setStep(3); }
+        else if (!result.errors.length) setScanError(t("noGitReposFound"));
+      } catch (error) { setScanError(error instanceof Error ? error.message : t("scanFailed")); }
     });
   }
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("title")}
-      data-testid="first-run-wizard-dialog"
-      className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-    >
-      <div className="w-full max-w-xl rounded-2xl border border-border-default bg-bg-surface p-6 shadow-2xl transition-all">
-        {/* Wizard Step Progress */}
-        <div className="flex items-center justify-between border-b border-border-subtle pb-4 mb-6">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-primary text-text-inverse font-bold text-sm">
-              KV
-            </span>
-            <div>
-              <h2 className="text-base font-semibold text-text-primary leading-tight">
-                {t("welcomeTitle")}
-              </h2>
-              <p className="text-xs text-text-muted">{t("welcomeSubtitle")}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {[1, 2, 3].map((s) => (
-              <span
-                key={s}
-                className={`h-2 rounded-full transition-all ${
-                  step === s
-                    ? "w-6 bg-brand-primary"
-                    : step > s
-                      ? "w-2 bg-brand-primary/50"
-                      : "w-2 bg-border-default"
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Step 1: Tool Verification */}
-        {step === 1 ? (
-          <div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-text-primary">
-                {t("step1Title")}
-              </h3>
-              <p className="text-xs text-text-muted mt-0.5">
-                {t("step1Description")}
-              </p>
-            </div>
-
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {isLoadingTools ? (
-                <div className="flex items-center justify-center py-10 text-xs text-text-muted">
-                  {t("checkingTools")}
-                </div>
-              ) : (
-                tools.map((item) => (
-                  <div
-                    key={item.tool}
-                    className="flex items-center justify-between rounded-xl border border-border-subtle bg-bg-page/60 px-3 py-2.5"
-                  >
-                    <div className="min-w-0 flex-1 pr-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-text-primary">
-                          {item.name}
-                        </span>
-                        {item.version ? (
-                          <span className="truncate text-[10px] text-text-muted font-mono">
-                            {item.version}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="text-[11px] text-text-muted truncate mt-0.5">
-                        {item.description}
-                      </p>
-                    </div>
-
-                    <div className="shrink-0">
-                      {item.isInstalled ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-status-success/15 px-2 py-0.5 text-[11px] font-semibold text-status-success">
-                          ✓ {t("ready")}
-                        </span>
-                      ) : (
-                        <span
-                          title={item.installCommand}
-                          className="inline-flex items-center gap-1 rounded-full bg-border-default px-2 py-0.5 text-[11px] font-medium text-text-muted"
-                        >
-                          {t("notDetected")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="flex items-center justify-between mt-6 pt-4 border-t border-border-subtle">
-              <button
-                type="button"
-                onClick={() => setStep(2)}
-                className="text-xs text-text-muted hover:text-text-primary"
-              >
-                {t("skipStep")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setStep(2)}
-                className="rounded-lg bg-brand-primary px-4 py-2 text-xs font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-hover"
-              >
-                {t("continue")} →
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Step 2: Add First Project */}
-        {step === 2 ? (
-          <div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-text-primary">
-                {t("step2Title")}
-              </h3>
-              <p className="text-xs text-text-muted mt-0.5">
-                {t("step2Description")}
-              </p>
-            </div>
-
-            <div className="space-y-4 my-6">
-              <div>
-                <label className="block text-xs font-medium text-text-primary mb-1.5">
-                  {t("folderPathLabel")}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={scanPath}
-                    onChange={(e) => setScanPath(e.target.value)}
-                    placeholder="e.g. ~/Projects or D:\code"
-                    className="min-w-0 flex-1 rounded-lg border border-border-default bg-bg-page px-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:border-brand-primary focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleScanProject}
-                    disabled={isScanning || !scanPath.trim()}
-                    className="shrink-0 rounded-lg bg-brand-primary px-4 py-2 text-xs font-semibold text-text-inverse disabled:opacity-50 hover:bg-brand-hover"
-                  >
-                    {isScanning ? t("scanning") : t("scanButton")}
-                  </button>
-                </div>
-                {scanError ? (
-                  <p className="text-xs text-status-error mt-2">{scanError}</p>
-                ) : null}
-              </div>
-
-              <div className="rounded-xl border border-border-subtle bg-bg-page/40 p-3 text-xs text-text-muted leading-relaxed">
-                💡 {t("scanTip")}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mt-6 pt-4 border-t border-border-subtle">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="text-xs text-text-muted hover:text-text-primary"
-              >
-                ← {tc("back")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setStep(3)}
-                className="text-xs text-text-muted hover:text-text-primary"
-              >
-                {t("skipStep")}
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Step 3: Finished / Ready */}
-        {step === 3 ? (
-          <div className="text-center py-4">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-status-success/15 text-status-success">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            </div>
-
-            <h3 className="text-base font-semibold text-text-primary mb-1">
-              {t("allSetTitle")}
-            </h3>
-            <p className="text-xs text-text-muted max-w-sm mx-auto mb-6 leading-relaxed">
-              {scanResultCount && scanResultCount > 0
-                ? t("allSetDescriptionWithProjects", { count: scanResultCount })
-                : t("allSetDescription")}
-            </p>
-
-            <button
-              type="button"
-              onClick={handleFinish}
-              data-testid="wizard-finish-btn"
-              className="w-full rounded-xl bg-brand-primary py-2.5 text-xs font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-hover"
-            >
-              {t("getStartedButton")} →
-            </button>
-          </div>
-        ) : null}
+  return <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t("title")} data-terminal-focus-blocker="true" data-testid="first-run-wizard-dialog"
+    onKeyDown={(event) => {
+      if (event.key !== "Tab") return;
+      const items = [...dialogRef.current!.querySelectorAll<HTMLElement>("button:not([disabled]),a[href],input:not([disabled]),select:not([disabled])")];
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }}
+    className="fixed inset-0 z-[500] flex items-center justify-center bg-bg-overlay p-4">
+    <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-border-default bg-bg-surface p-6 shadow-2xl">
+      <div className="mb-5 flex items-center justify-between gap-3"><h2 className="text-lg font-semibold text-text-primary">{t("welcomeTitle")}</h2><LanguageSelector /></div>
+      <div className="mb-6 flex gap-2">{[1, 2, 3].map((value) => <span key={value} className={`h-1.5 flex-1 rounded-full ${step >= value ? "bg-brand-primary" : "bg-border-default"}`} />)}</div>
+      <h3 className="font-semibold text-text-primary">{t(`step${step}Title`)}</h3>
+      {step === 1 && <div className="mt-3 space-y-3">
+        <p className="text-sm text-text-muted">{tm("setupToolsHint")}</p>
+        {checking ? <p className="text-sm text-text-muted">{t("checkingTools")}</p> : <>
+          {checkError && <p role="alert" className="text-sm text-status-warning">{tm("setupCheckFailed")}</p>}
+          {tools.filter((item) => ["git", "git-bash", "claude"].includes(item.tool)).map((item) => <div key={item.tool} className="rounded-lg border border-border-default p-3">
+            <div className="flex justify-between gap-3 text-sm"><strong className="text-text-primary">{item.name}</strong><span className={item.isInstalled ? "text-status-success" : "text-status-warning"}>{item.isInstalled ? t("ready") : t("notDetected")}</span></div>
+            {!item.isInstalled && item.installCommand && <code className="mt-2 block break-all text-xs text-text-secondary">{item.installCommand}</code>}
+          </div>)}
+          <div className="flex flex-wrap items-center gap-3"><Link href="/ai-accounts" className="text-sm text-brand-primary">{accountReady ? tm("accountSignedIn") : tm("signInClaude")}</Link>
+            <button type="button" onClick={() => { void load(); }} className="text-sm text-brand-primary">{tm("recheck")}</button></div>
+        </>}
+      </div>}
+      {step === 2 && <div className="mt-3 space-y-4">
+        <p className="text-sm text-text-muted">{t("step2Description")}</p>
+        <label className="block text-sm text-text-secondary">{t("folderPathLabel")}</label>
+        <FolderSearchInput name="onboarding-project-path" onSelect={setScanPath} placeholder="D:/projects/" />
+        <p className="text-xs text-text-muted">{t("scanTip")}</p>
+        <button type="button" disabled={isScanning || !scanPath.trim()} onClick={scan} className="rounded-md bg-brand-primary px-4 py-2 text-sm text-text-inverse disabled:opacity-50">{isScanning ? t("scanning") : t("scanButton")}</button>
+        {projectReady && <p className="text-sm text-status-success">{tm("projectReady")}</p>}
+      </div>}
+      {step === 3 && <div className="mt-3 space-y-4">
+        <p className="text-sm text-text-muted">{tm(ready ? "firstTaskHint" : "setupIncomplete")}</p>
+        <button type="button" disabled={!ready || finishing} onClick={() => { void finish(true); }} data-testid="wizard-finish-btn"
+          className="w-full rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-medium text-text-inverse disabled:opacity-50">{tm("runFirstTask")}</button>
+        {!ready && <button type="button" onClick={() => setStep(!toolsReady || !accountReady ? 1 : 2)} className="text-sm text-brand-primary">{tm("continueSetup")}</button>}
+      </div>}
+      {scanError && <p role="alert" className="mt-3 whitespace-pre-wrap text-sm text-status-warning">{scanError}</p>}
+      <div className="mt-6 flex items-center justify-between gap-3 border-t border-border-subtle pt-4">
+        <button type="button" disabled={isScanning || finishing} onClick={() => { void finish(); }} className="text-sm text-text-muted">{t("skipStep")}</button>
+        {step > 1 && <button type="button" disabled={isScanning} onClick={() => setStep(step - 1)} className="text-sm text-text-secondary">{tm("back")}</button>}
+        {step < 3 && <button type="button" disabled={isScanning || (step === 1 ? checking || !toolsReady || !accountReady : !projectReady)}
+          onClick={() => setStep(step + 1)} className="rounded-md bg-brand-primary px-4 py-2 text-sm text-text-inverse disabled:opacity-50">{t("continue")}</button>}
+        {step < 3 && <button type="button" disabled={isScanning} onClick={() => setStep(step + 1)} className="text-xs text-text-muted">{tm("skipThisStep")}</button>}
       </div>
     </div>
-  );
+  </div>;
 }
