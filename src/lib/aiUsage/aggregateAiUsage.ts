@@ -2,7 +2,7 @@ import type { AiAccountRegistration } from "@/lib/aiUsage/accountRegistry";
 import { discoverProviderAccounts } from "@/lib/aiUsage/accountDiscovery";
 import { readClaudeUsage } from "@/lib/aiUsage/readClaudeUsage";
 import { readCodexUsage } from "@/lib/aiUsage/readCodexUsage";
-import { readGeminiUsage } from "@/lib/aiUsage/readGeminiUsage";
+import { readAntigravityUsage } from "@/lib/aiUsage/readAntigravityUsage";
 import { createErrorUsage, createUnavailableUsage } from "@/lib/aiUsage/shared";
 import type {
   AiUsageAccount,
@@ -20,7 +20,7 @@ interface ProviderUsageSource {
 const PROVIDER_SOURCES: ProviderUsageSource[] = [
   { provider: "claude", read: readClaudeUsage },
   { provider: "codex", read: readCodexUsage },
-  { provider: "gemini", read: readGeminiUsage },
+  { provider: "antigravity", read: readAntigravityUsage },
 ];
 
 /**
@@ -71,19 +71,19 @@ function buildUsageTasks(
 export async function aggregateAiUsage(
   registrations: AiAccountRegistration[] = [],
 ): Promise<AiUsageSnapshot> {
-  const discoveredAccounts = await Promise.all(
-    PROVIDER_SOURCES.map((source) => discoverAccountsOrNone(source, registrations)),
-  );
-  const usageTasks = PROVIDER_SOURCES.flatMap((source, index) => (
-    buildUsageTasks(source, discoveredAccounts[index])
-  ));
-
-  const settledResults = await Promise.allSettled(usageTasks.map(({ read }) => read()));
-  const accounts = settledResults.map((settled, index) => (
-    settled.status === "fulfilled"
-      ? settled.value
-      : createErrorUsage(usageTasks[index].account, "fetch-failed")
-  ));
+  // Each provider starts reading usage as soon as its own discovery finishes.
+  // A slow keychain lookup must not delay requests for unrelated providers.
+  const providerResults = await Promise.all(PROVIDER_SOURCES.map(async (source) => {
+    const discoveredAccounts = await discoverAccountsOrNone(source, registrations);
+    const usageTasks = buildUsageTasks(source, discoveredAccounts);
+    const settledResults = await Promise.allSettled(usageTasks.map(({ read }) => read()));
+    return settledResults.map((settled, index) => (
+      settled.status === "fulfilled"
+        ? settled.value
+        : createErrorUsage(usageTasks[index].account, "fetch-failed")
+    ));
+  }));
+  const accounts = providerResults.flat();
 
   return {
     accounts,
