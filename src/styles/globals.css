@@ -669,6 +669,45 @@ body {
   letter-spacing: 0;
 }
 
+/* Reserve the native caption row across all desktop routes. */
+.desktop-window-shell {
+  --desktop-titlebar-height: env(titlebar-area-height, 32px);
+  padding-top: var(--desktop-titlebar-height);
+}
+
+.desktop-window-titlebar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 600;
+  height: var(--desktop-titlebar-height);
+  overflow: hidden;
+  background: var(--color-bg-page);
+  border-bottom: 1px solid var(--color-border-default);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.desktop-window-title {
+  display: flex;
+  align-items: center;
+  margin-left: env(titlebar-area-x, 0px);
+  width: env(titlebar-area-width, calc(100% - 140px));
+  height: 100%;
+  padding-inline: 16px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.desktop-window-shell .h-screen {
+  height: calc(100vh - var(--desktop-titlebar-height));
+}
+
+.desktop-window-shell .min-h-screen {
+  min-height: calc(100vh - var(--desktop-titlebar-height));
+}
+
 * {
   scrollbar-color: var(--color-border-strong) transparent;
 }
