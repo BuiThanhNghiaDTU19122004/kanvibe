@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/desktop/renderer/navigation";
+import { filterPanesByWorktree } from "@/desktop/shared/liveAiSessions";
 import {
   navigateToTaskDetail,
   shouldHandleTaskNavigationClick,
@@ -216,6 +217,10 @@ export default function TaskCard({
   const router = useRouter();
   const effectivePriority = resolveEffectivePriority(task, rootPriorityByProjectId);
   const isPriorityInherited = isInheritedPriority(task, rootPriorityByProjectId);
+  const taskRunningPanes = useMemo(
+    () => filterPanesByWorktree(runningAgentPanes, task.worktreePath),
+    [runningAgentPanes, task.worktreePath],
+  );
 
   /** 프로젝트명 행에 겹쳐 둔다. 프로젝트가 없는 카드에서는 첫 줄인 제목 행으로 내려간다 */
   const unreadBadge = unreadNotificationCount > 0 ? (
@@ -393,6 +398,24 @@ export default function TaskCard({
                 <p className="mt-0.5 line-clamp-1 text-[11px] leading-4 text-text-muted">
                   {task.description}
                 </p>
+              )}
+
+              {taskRunningPanes.length > 0 && (
+                <div
+                  className="mt-1.5 flex items-center gap-1.5 rounded-md bg-status-success/10 border border-status-success/30 px-2 py-0.5 text-[11px] text-text-primary"
+                  data-testid="task-card-active-agent-banner"
+                >
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-success opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-status-success" />
+                  </span>
+                  <span className="font-medium truncate">
+                    {taskRunningPanes.map((p) => p.provider.charAt(0).toUpperCase() + p.provider.slice(1)).join(", ")}
+                  </span>
+                  <span className="ml-auto text-[10px] text-text-muted font-mono shrink-0">
+                    {taskRunningPanes[0].windowName || "running"}
+                  </span>
+                </div>
               )}
             </div>
           </div>
