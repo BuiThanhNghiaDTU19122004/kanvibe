@@ -1,3 +1,8 @@
+vi.mock("@/components/TaskWorkspace", () => ({ default: () => null }));
+vi.mock("@/components/LoadError", () => ({ default: ({ onRetry }: { onRetry: () => void }) => <div role="alert"><button onClick={onRetry}>retry</button></div> }));
+vi.mock("@/components/LanguageSelector", () => ({ default: () => null }));
+vi.mock("@/components/SetupChecklist", () => ({ default: () => null }));
+vi.mock("@/desktop/renderer/hooks/useLiveAiSessions", async (importOriginal) => ({ ...(await importOriginal<object>()), useAgentMonitor: () => ({ value: { panes: [], runtimes: [] }, error: false, updatedAt: null, retry: () => {} }) }));
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useEffect, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,7 +28,7 @@ const mocks = vi.hoisted(() => ({
   deleteTask: vi.fn(),
   getGitDiffFiles: vi.fn(),
   getTaskHooksStatus: vi.fn(),
-  getTaskGeminiHooksStatus: vi.fn(),
+  getTaskAntigravityHooksStatus: vi.fn(),
   getTaskCodexHooksStatus: vi.fn(),
   getTaskOpenCodeHooksStatus: vi.fn(),
   getTaskAiSessions: vi.fn(),
@@ -81,6 +86,7 @@ function TaskDetailShortcutBlocker() {
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
+  useLocale: () => "en",
 }));
 
 vi.mock("@hugeicons/react", () => ({
@@ -163,7 +169,7 @@ vi.mock("@/desktop/renderer/actions/diff", () => ({
 
 vi.mock("@/desktop/renderer/actions/project", () => ({
   getTaskHooksStatus: (...args: unknown[]) => mocks.getTaskHooksStatus(...args),
-  getTaskGeminiHooksStatus: (...args: unknown[]) => mocks.getTaskGeminiHooksStatus(...args),
+  getTaskAntigravityHooksStatus: (...args: unknown[]) => mocks.getTaskAntigravityHooksStatus(...args),
   getTaskCodexHooksStatus: (...args: unknown[]) => mocks.getTaskCodexHooksStatus(...args),
   getTaskOpenCodeHooksStatus: (...args: unknown[]) => mocks.getTaskOpenCodeHooksStatus(...args),
   getTaskAiSessions: (...args: unknown[]) => mocks.getTaskAiSessions(...args),
@@ -246,7 +252,7 @@ vi.mock("@/components/DoneStatusButton", () => ({
 vi.mock("@/components/HooksStatusCard", () => ({
   default: (props: {
     initialClaudeStatus: { installed: boolean } | null;
-    initialGeminiStatus: { installed: boolean } | null;
+    initialAntigravityStatus: { installed: boolean } | null;
     initialCodexStatus: { installed: boolean } | null;
     initialOpenCodeStatus: { installed: boolean } | null;
   }) => {
@@ -256,7 +262,7 @@ vi.mock("@/components/HooksStatusCard", () => ({
       <div
         data-testid="hooks-status-card"
         data-claude-installed={String(props.initialClaudeStatus?.installed ?? false)}
-        data-gemini-installed={String(props.initialGeminiStatus?.installed ?? false)}
+        data-antigravity-installed={String(props.initialAntigravityStatus?.installed ?? false)}
         data-codex-installed={String(props.initialCodexStatus?.installed ?? false)}
         data-opencode-installed={String(props.initialOpenCodeStatus?.installed ?? false)}
       />
@@ -306,11 +312,12 @@ vi.mock("@/desktop/renderer/components/TerminalLoader", async () => {
 describe("TaskDetailRoute", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.location.hash = "#/en/task/task-1?view=terminal";
     sessionStorage.clear();
     mocks.getTaskIdByProjectAndBranch.mockResolvedValue(null);
     mocks.getGitDiffFiles.mockResolvedValue([]);
     mocks.getTaskHooksStatus.mockResolvedValue(null);
-    mocks.getTaskGeminiHooksStatus.mockResolvedValue(null);
+    mocks.getTaskAntigravityHooksStatus.mockResolvedValue(null);
     mocks.getTaskCodexHooksStatus.mockResolvedValue(null);
     mocks.getTaskOpenCodeHooksStatus.mockResolvedValue(null);
     mocks.getTaskAiSessions.mockResolvedValue({
@@ -407,7 +414,7 @@ describe("TaskDetailRoute", () => {
       baseBranchTaskId: null,
       diffFiles: [],
       claudeHooksStatus: null,
-      geminiHooksStatus: null,
+      antigravityHooksStatus: null,
       codexHooksStatus: null,
       openCodeHooksStatus: null,
       aiSessions: {
@@ -518,7 +525,7 @@ describe("TaskDetailRoute", () => {
 
     await screen.findByTestId("task-title");
 
-    expect(mocks.markTaskNotificationsRead).toHaveBeenCalledWith("task-1");
+    await waitFor(() => expect(mocks.markTaskNotificationsRead).toHaveBeenCalledWith("task-1"));
   });
 
   it("창이 비활성이면 상세 화면이 새로고침돼도 알림을 읽음 처리하지 않는다", async () => {
@@ -598,7 +605,7 @@ describe("TaskDetailRoute", () => {
     });
 
     expect(screen.queryByText("Loading...")).toBeNull();
-    expect(screen.getByText("taskNotFound")).toBeTruthy();
+    expect(screen.getByRole("alert")).toBeTruthy();
   });
 
   it("stale cache의 레거시 사이드바 힌트 값은 아이콘 패널 UI에 렌더링하지 않는다", () => {
@@ -622,7 +629,7 @@ describe("TaskDetailRoute", () => {
       baseBranchTaskId: null,
       diffFiles: [],
       claudeHooksStatus: null,
-      geminiHooksStatus: null,
+      antigravityHooksStatus: null,
       codexHooksStatus: null,
       openCodeHooksStatus: null,
       aiSessions: {
@@ -666,7 +673,7 @@ describe("TaskDetailRoute", () => {
       baseBranchTaskId: null,
       diffFiles: [],
       claudeHooksStatus: null,
-      geminiHooksStatus: null,
+      antigravityHooksStatus: null,
       codexHooksStatus: null,
       openCodeHooksStatus: null,
       aiSessions: {
@@ -713,7 +720,7 @@ describe("TaskDetailRoute", () => {
       baseBranchTaskId: null,
       diffFiles: [],
       claudeHooksStatus: null,
-      geminiHooksStatus: null,
+      antigravityHooksStatus: null,
       codexHooksStatus: null,
       openCodeHooksStatus: null,
       aiSessions: {
@@ -1625,7 +1632,7 @@ describe("TaskDetailRoute", () => {
       expect(screen.getAllByText("Please fix the UI").length).toBeGreaterThanOrEqual(1);
     });
     expect(screen.getByText("Updated the terminal chat view.")).toBeTruthy();
-    expect(screen.queryByLabelText("terminal input")).toBeNull();
+    expect(screen.getByLabelText("terminal input").closest(".hidden")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "aiSessions.inlineChat" }));
 
@@ -2667,7 +2674,7 @@ describe("TaskDetailRoute", () => {
     expect(screen.getByRole("button", { name: "aiSessions.copiedMessage" })).toBeTruthy();
   });
 
-  it("채팅 화면에서 Claude/Codex/OpenCode/Gemini 세션을 한 목록에 표시하고 provider를 구분한다", async () => {
+  it("채팅 화면에서 Claude/Codex/OpenCode/Antigravity 세션을 한 목록에 표시하고 provider를 구분한다", async () => {
     mocks.getSidebarDefaultCollapsed.mockResolvedValue(true);
     mocks.getTaskById.mockResolvedValue({
       id: "task-1",
@@ -2691,7 +2698,7 @@ describe("TaskDetailRoute", () => {
       repoPath: "/repo",
       sources: [],
       sessions: [
-        { id: "gemini-1", provider: "gemini", startedAt: null, updatedAt: "2026-01-01T00:04:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Gemini answer", firstUserPrompt: "Gemini prompt", messageCount: 3, sourceRef: "gemini.json" },
+        { id: "antigravity-1", provider: "antigravity", startedAt: null, updatedAt: "2026-01-01T00:04:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Antigravity answer", firstUserPrompt: "Antigravity prompt", messageCount: 3, sourceRef: "antigravity.json" },
         { id: "claude-1", provider: "claude", startedAt: null, updatedAt: "2026-01-01T00:03:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Claude answer", firstUserPrompt: "Claude prompt", messageCount: 2, sourceRef: "claude.jsonl" },
         { id: "opencode-1", provider: "opencode", startedAt: null, updatedAt: "2026-01-01T00:02:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "OpenCode answer", firstUserPrompt: "OpenCode prompt", messageCount: 4, sourceRef: "opencode-1" },
         { id: "codex-1", provider: "codex", startedAt: null, updatedAt: "2026-01-01T00:01:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Codex answer", firstUserPrompt: "Codex prompt", messageCount: 5, sourceRef: "codex.jsonl" },
@@ -2703,12 +2710,12 @@ describe("TaskDetailRoute", () => {
     fireEvent.click(await screen.findByRole("button", { name: "aiSessions.inlineChat" }));
 
     expect(await screen.findByTestId("ai-session-list")).toBeTruthy();
-    for (const provider of ["gemini", "claude", "opencode", "codex"]) {
+    for (const provider of ["antigravity", "claude", "opencode", "codex"]) {
       const icon = screen.getByTestId(`ai-session-provider-${provider}`);
       expect(icon).toBeTruthy();
       expect(icon.getAttribute("data-icon-source")).toBe("lobehub-icons");
     }
-    expect(screen.getByRole("button", { name: /Gemini answer/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Antigravity answer/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Claude answer/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /OpenCode answer/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Codex answer/ })).toBeTruthy();
@@ -2738,7 +2745,7 @@ describe("TaskDetailRoute", () => {
       repoPath: "/repo",
       sources: [],
       sessions: [
-        { id: "gemini-1", provider: "gemini", startedAt: null, updatedAt: "2026-01-01T00:04:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Gemini answer", firstUserPrompt: "Gemini prompt", messageCount: 3, sourceRef: "gemini.json" },
+        { id: "antigravity-1", provider: "antigravity", startedAt: null, updatedAt: "2026-01-01T00:04:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Antigravity answer", firstUserPrompt: "Antigravity prompt", messageCount: 3, sourceRef: "antigravity.json" },
         { id: "claude-1", provider: "claude", startedAt: null, updatedAt: "2026-01-01T00:03:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Claude answer", firstUserPrompt: "Claude prompt", messageCount: 2, sourceRef: "claude.jsonl" },
         { id: "opencode-1", provider: "opencode", startedAt: null, updatedAt: "2026-01-01T00:02:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "OpenCode answer", firstUserPrompt: "OpenCode prompt", messageCount: 4, sourceRef: "opencode-1" },
         { id: "codex-1", provider: "codex", startedAt: null, updatedAt: "2026-01-01T00:01:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Codex answer", firstUserPrompt: "Codex prompt", messageCount: 5, sourceRef: "codex.jsonl" },
@@ -2752,19 +2759,19 @@ describe("TaskDetailRoute", () => {
 
     fireEvent.click(screen.getByTestId("ai-session-filter-claude"));
     expect(screen.getByRole("button", { name: /Claude answer/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Gemini answer/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Antigravity answer/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /OpenCode answer/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Codex answer/ })).toBeNull();
 
-    fireEvent.click(screen.getByTestId("ai-session-filter-gemini"));
+    fireEvent.click(screen.getByTestId("ai-session-filter-antigravity"));
     expect(screen.getByRole("button", { name: /Claude answer/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Gemini answer/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Antigravity answer/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /OpenCode answer/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Codex answer/ })).toBeNull();
 
     fireEvent.click(screen.getByTestId("ai-session-filter-claude"));
     expect(screen.queryByRole("button", { name: /Claude answer/ })).toBeNull();
-    expect(screen.getByRole("button", { name: /Gemini answer/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Antigravity answer/ })).toBeTruthy();
   });
 
   it("AI 채팅 검색은 입력한 검색어로 히스토리를 다시 조회하고 결과 세션을 보여준다", async () => {
@@ -2791,7 +2798,7 @@ describe("TaskDetailRoute", () => {
       repoPath: "/repo",
       sources: [],
       sessions: [
-        { id: "gemini-1", provider: "gemini", startedAt: null, updatedAt: "2026-01-01T00:04:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Gemini architecture answer", firstUserPrompt: "Find database migration chat", messageCount: 3, sourceRef: "gemini.json" },
+        { id: "antigravity-1", provider: "antigravity", startedAt: null, updatedAt: "2026-01-01T00:04:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Antigravity architecture answer", firstUserPrompt: "Find database migration chat", messageCount: 3, sourceRef: "antigravity.json" },
       ],
     });
 
@@ -2805,7 +2812,7 @@ describe("TaskDetailRoute", () => {
     await waitFor(() => {
       expect(mocks.getTaskAiSessions).toHaveBeenCalledWith("task-1", "database migration", null, 20);
     });
-    expect(await screen.findByRole("button", { name: /Gemini architecture answer/ })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /Antigravity architecture answer/ })).toBeTruthy();
   });
 
   it("검색이 바뀐 뒤 늦게 도착한 이전 세션 페이지를 현재 결과에 섞지 않는다", async () => {
@@ -2867,7 +2874,7 @@ describe("TaskDetailRoute", () => {
         sources: [],
         nextCursor: null,
         sessions: [
-          { id: "filtered-session", provider: "gemini", startedAt: null, updatedAt: "2026-01-01T00:04:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Filtered chat", firstUserPrompt: "Filtered prompt", messageCount: 1, sourceRef: "filtered.json" },
+          { id: "filtered-session", provider: "antigravity", startedAt: null, updatedAt: "2026-01-01T00:04:00.000Z", matchedPath: "/repo", matchScope: "worktree", title: "Filtered chat", firstUserPrompt: "Filtered prompt", messageCount: 1, sourceRef: "filtered.json" },
         ],
       });
     });
