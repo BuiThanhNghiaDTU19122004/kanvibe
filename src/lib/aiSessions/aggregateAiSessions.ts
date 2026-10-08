@@ -2,19 +2,19 @@ import { isSSHTransportError } from "@/lib/gitOperations";
 import { createAggregationResult, createReaderResult, paginateItems, sortSessionsDescending, toSourceStatus } from "@/lib/aiSessions/shared";
 import { readClaudeSessionDetail, readClaudeSessions } from "@/lib/aiSessions/readClaudeSessions";
 import { readCodexSessionDetail, readCodexSessions } from "@/lib/aiSessions/readCodexSessions";
-import { readGeminiSessionDetail, readGeminiSessions } from "@/lib/aiSessions/readGeminiSessions";
+import { readAntigravitySessionDetail, readAntigravitySessions } from "@/lib/aiSessions/readAntigravitySessions";
 import { readOpenCodeSessionDetail, readOpenCodeSessions } from "@/lib/aiSessions/readOpenCodeSessions";
 import type { AggregatedAiSessionsResult, AiSessionDetailReaderResult, AiSessionProvider, AiSessionReaderContext, AiSessionReaderResult } from "@/lib/aiSessions/types";
 
 export async function aggregateAiSessions(context: AiSessionReaderContext): Promise<AggregatedAiSessionsResult> {
-  const [claude, codex, openCode, gemini] = await Promise.all([
+  const [claude, codex, openCode, antigravity] = await Promise.all([
     readReaderSafely("claude", context, readClaudeSessions),
     readReaderSafely("codex", context, readCodexSessions),
     readReaderSafely("opencode", context, readOpenCodeSessions),
-    readReaderSafely("gemini", context, readGeminiSessions),
+    readReaderSafely("antigravity", context, readAntigravitySessions),
   ]);
 
-  const allSessions = [...claude.sessions, ...codex.sessions, ...openCode.sessions, ...gemini.sessions];
+  const allSessions = [...claude.sessions, ...codex.sessions, ...openCode.sessions, ...antigravity.sessions];
   const sortedSessions = sortSessionsDescending(allSessions);
   const paginatedSessions = context.limit
     ? paginateItems(sortedSessions, context.cursor, context.limit)
@@ -25,7 +25,7 @@ export async function aggregateAiSessions(context: AiSessionReaderContext): Prom
     targetPath: context.worktreePath,
     repoPath: context.repoPath,
     sessions: paginatedSessions.items,
-    sources: [claude, codex, openCode, gemini].map(toSourceStatus),
+    sources: [claude, codex, openCode, antigravity].map(toSourceStatus),
     nextCursor: paginatedSessions.nextCursor,
   });
 }
@@ -66,8 +66,8 @@ export async function getAiSessionDetail(
       return readCodexSessionDetail(context, sessionId, sourceRef, cursor, limit);
     case "opencode":
       return readOpenCodeSessionDetail(context, sessionId, sourceRef, cursor, limit);
-    case "gemini":
-      return readGeminiSessionDetail(context, sessionId, sourceRef, cursor, limit);
+    case "antigravity":
+      return readAntigravitySessionDetail(context, sessionId, sourceRef, cursor, limit);
     default:
       return null;
   }
