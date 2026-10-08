@@ -127,8 +127,8 @@ describe("kanvibeHooksInstaller", () => {
     expect(getWrittenFilePaths()).toEqual(expect.arrayContaining([
       "/repo/.claude/hooks/kanvibe-prompt-hook.sh",
       "/repo/.claude/settings.json",
-      "/repo/.antigravity/hooks/kanvibe-stop-hook.sh",
-      "/repo/.antigravity/settings.json",
+      "/repo/.agents/hooks/kanvibe-stop-hook.sh",
+      "/repo/.agents/hooks.json",
       "/repo/.codex/hooks/kanvibe-permission-hook.sh",
       "/repo/.codex/hooks.json",
       "/repo/.codex/config.toml",
@@ -179,7 +179,7 @@ describe("kanvibeHooksInstaller", () => {
     expect(mockReadTextFiles).toHaveBeenCalledTimes(1);
     expect(mockReadTextFiles).toHaveBeenCalledWith([
       "/remote/repo/.claude/settings.json",
-      "/remote/repo/.antigravity/settings.json",
+      "/remote/repo/.agents/hooks.json",
       "/remote/repo/.codex/config.toml",
       "/remote/repo/.codex/hooks.json",
     ], "remote-host");
@@ -208,12 +208,6 @@ describe("kanvibeHooksInstaller", () => {
           Stop: [{ hooks: [{ type: "command", command: '"/tmp/old/.claude/hooks/kanvibe-stop-hook.sh"', timeout: 10 }] }],
         },
       }),
-      "/remote/repo/.antigravity/settings.json": JSON.stringify({
-        hooks: {
-          BeforeAgent: [{ matcher: "*", hooks: [{ type: "command", command: '"/tmp/old/.antigravity/hooks/kanvibe-prompt-hook.sh"', timeout: 10000 }] }],
-          AfterAgent: [{ matcher: "*", hooks: [{ type: "command", command: '"/tmp/old/.antigravity/hooks/kanvibe-stop-hook.sh"', timeout: 10000 }] }],
-        },
-      }),
     }));
     const { installKanvibeHooks } = await import("@/lib/kanvibeHooksInstaller");
 
@@ -229,11 +223,6 @@ describe("kanvibeHooksInstaller", () => {
     expect(claudeSettings.hooks.Stop).toHaveLength(1);
     expect(claudeSettings.hooks.Stop[0].hooks[0].command).toBe('"$CLAUDE_PROJECT_DIR"/.claude/hooks/kanvibe-stop-hook.sh');
 
-    const antigravitySettings = JSON.parse(findWrittenContent("/remote/repo/.antigravity/settings.json"));
-    expect(antigravitySettings.hooks.BeforeAgent).toHaveLength(1);
-    expect(antigravitySettings.hooks.BeforeAgent[0].hooks[0].command).toBe('"$ANTIGRAVITY_PROJECT_DIR"/.antigravity/hooks/kanvibe-prompt-hook.sh');
-    expect(antigravitySettings.hooks.AfterAgent).toHaveLength(1);
-    expect(antigravitySettings.hooks.AfterAgent[0].hooks[0].command).toBe('"$ANTIGRAVITY_PROJECT_DIR"/.antigravity/hooks/kanvibe-stop-hook.sh');
   });
 
   it("Codex 재설치는 기존 설정을 보존하면서 최신 hooks.json/config.toml 구조로 갱신한다", async () => {
