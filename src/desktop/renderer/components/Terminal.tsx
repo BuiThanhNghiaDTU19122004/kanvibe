@@ -5,6 +5,7 @@ import { installOsc52ClipboardHandler } from "@/lib/terminalClipboard";
 import { REQUEST_ACTIVE_TERMINAL_FOCUS_EVENT, hasTerminalFocusBlocker } from "@/desktop/renderer/utils/terminalFocus";
 
 interface TerminalProps {
+  onStatus?: (tabId: string | null, status: "ready" | "error", error?: string) => void;
   taskId: string;
   /** terminal 세션은 탭마다 PTY가 따로라 탭 식별자가 필요하다. tmux·zellij 세션은 null이다 */
   tabId?: string | null;
@@ -76,11 +77,13 @@ function loadNerdFontFamily(): Promise<string | null> {
   return nerdFontLoadPromise;
 }
 
-export default function Terminal({ taskId, tabId = null, isHidden = false, isRemote = false }: TerminalProps) {
+export default function Terminal({ taskId, tabId = null, isHidden = false, isRemote = false, onStatus }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   /** connect는 taskId·tabId에만 묶여 있어야 하므로, 표시 여부·원격 여부는 ref로 읽는다 */
   const isHiddenRef = useRef(isHidden);
   const isRemoteRef = useRef(isRemote);
+  const onStatusRef = useRef(onStatus);
+  onStatusRef.current = onStatus;
 
   isHiddenRef.current = isHidden;
   isRemoteRef.current = isRemote;
@@ -220,6 +223,7 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
     const unsubscribeClose = window.kanvibeDesktop!.onTerminalClose((event: { taskId: string; tabId: string | null; reason: string | null }) => {
       if (isThisTerminal(event)) {
         terminal.writeln(`\r\n\x1b[31m${event.reason || "연결이 종료되었습니다."}\x1b[0m`);
+        onStatusRef.current?.(tabId, "error", event.reason ?? undefined);
       }
     });
 
@@ -257,6 +261,7 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
     });
 
     const terminalReady = await window.kanvibeDesktop!.openTerminal(taskId, tabId, terminal.cols, terminal.rows);
+    onStatusRef.current?.(tabId, terminalReady.ok ? "ready" : "error", terminalReady.error);
     if (!terminalReady.ok) {
       terminal.writeln(`\r\n\x1b[31m${terminalReady.error || "터미널 연결 실패"}\x1b[0m`);
       return () => {
@@ -280,7 +285,7 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
     });
 
     const focusCurrentTerminal = () => {
-      if (hasTerminalFocusBlocker()) {
+      if (isHiddenRef.current || hasTerminalFocusBlocker()) {
         return;
       }
 
@@ -346,6 +351,7 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
         cleanup = dispose;
       })
       .catch((error) => {
+        onStatusRef.current?.(tabId, "error", error instanceof Error ? error.message : "Terminal connection failed");
         console.error("데스크톱 터미널 초기화 실패:", error);
       });
 
