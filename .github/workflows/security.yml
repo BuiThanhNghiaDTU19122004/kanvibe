@@ -41,6 +41,7 @@ jobs:
           fetch-depth: 0
       - name: Scan source
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             git fetch origin main
             semgrep scan --config auto --baseline-commit "$(git merge-base HEAD origin/main)" --error
