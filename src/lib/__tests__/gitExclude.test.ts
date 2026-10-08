@@ -32,8 +32,8 @@ describe("gitExclude", () => {
       expect(content).not.toContain(".kanvibe/task-id");
       expect(content).toContain(".claude/hooks/");
       expect(content).toContain(".claude/settings.json");
-      expect(content).toContain(".gemini/hooks/");
-      expect(content).toContain(".gemini/settings.json");
+      expect(content).toContain(".antigravity/hooks/");
+      expect(content).toContain(".antigravity/settings.json");
       expect(content).toContain(".codex/hooks/");
       expect(content).toContain(".codex/hooks.json");
       expect(content).toContain(".codex/config.toml");
@@ -154,7 +154,7 @@ describe("gitExclude", () => {
         // Then
         const content = await readFile(commonExcludePath, "utf-8");
         expect(content).toContain(".claude/hooks/");
-        expect(content).toContain(".gemini/settings.json");
+        expect(content).toContain(".antigravity/settings.json");
         expect(content).toContain(".codex/hooks.json");
       } finally {
         await rm(worktreeDir, { recursive: true, force: true });
