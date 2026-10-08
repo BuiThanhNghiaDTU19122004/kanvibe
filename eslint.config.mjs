@@ -32,6 +32,8 @@ export default defineConfig([
     "scripts/**/*.cjs",
     "qa/**/*.cjs",
     "qa-output/**",
+    ".tooling/**",
+    ".codex/**",
     ".opencode/**",
     "docs-site/.next/**",
   ]),
