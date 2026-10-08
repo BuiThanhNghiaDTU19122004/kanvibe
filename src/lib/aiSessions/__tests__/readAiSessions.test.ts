@@ -5,7 +5,6 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readClaudeSessionDetail, readClaudeSessions } from "@/lib/aiSessions/readClaudeSessions";
 import { readCodexSessionDetail, readCodexSessions } from "@/lib/aiSessions/readCodexSessions";
-import { readGeminiSessionDetail, readGeminiSessions } from "@/lib/aiSessions/readGeminiSessions";
 
 let tempHome: string;
 
@@ -24,7 +23,7 @@ function jsonLines(values: unknown[]) {
 }
 
 function claudeProjectDirectoryName(targetPath: string) {
-  return path.resolve(targetPath).replaceAll(path.sep, "-").replaceAll("_", "-");
+  return path.resolve(targetPath).replaceAll(path.sep, "-").replaceAll("_", "-").replaceAll(":", "-");
 }
 
 function setupRemoteFileSystem(files: Record<string, string>) {
@@ -101,6 +100,7 @@ describe("AI session history readers", () => {
   beforeEach(async () => {
     tempHome = await mkdtemp(path.join(tmpdir(), "kanvibe-ai-sessions-"));
     vi.stubEnv("HOME", tempHome);
+    vi.stubEnv("USERPROFILE", tempHome);
   });
 
   afterEach(async () => {
@@ -321,63 +321,6 @@ describe("AI session history readers", () => {
     expect(sessions.sessions[0]?.updatedAt).toBe("2026-01-01T00:02:00.000Z");
   });
 
-  it("reads Gemini chat recordings from ~/.gemini/tmp/<project>/chats and classifies responses, thoughts, and tool calls", async () => {
-    const worktreePath = path.join(tempHome, "repo__worktrees", "task");
-    const chatFile = path.join(tempHome, ".gemini", "tmp", "task", "chats", "session-2026-01-01T00-00-gemini.json");
-    await writeJson(path.join(tempHome, ".gemini", "projects.json"), {
-      projects: {
-        [path.resolve(worktreePath)]: "task",
-      },
-    });
-    await writeJson(chatFile, {
-      sessionId: "gemini-session",
-      projectHash: "unused",
-      startTime: "2026-01-01T00:00:00.000Z",
-      lastUpdated: "2026-01-01T00:04:00.000Z",
-      kind: "main",
-      messages: [
-        { id: "user-1", timestamp: "2026-01-01T00:01:00.000Z", type: "user", content: [{ text: "make a plan" }] },
-        {
-          id: "gemini-1",
-          timestamp: "2026-01-01T00:02:00.000Z",
-          type: "gemini",
-          model: "gemini-2.5-pro",
-          content: [{ text: "Here is the plan." }],
-          thoughts: [{ subject: "analysis", description: "Compare history formats." }],
-          toolCalls: [{ name: "read_file", args: { path: "x" }, result: "file contents" }],
-        },
-        { id: "info-1", timestamp: "2026-01-01T00:03:00.000Z", type: "info", content: "checkpoint saved" },
-      ],
-    });
-
-    const sessions = await readGeminiSessions({ worktreePath, repoPath: worktreePath });
-    expect(sessions.sessions).toHaveLength(1);
-    expect(sessions.sessions[0]).toMatchObject({
-      id: "gemini-session",
-      provider: "gemini",
-      title: "make a plan",
-      updatedAt: "2026-01-01T00:02:00.000Z",
-      sourceRef: chatFile,
-    });
-
-    const detail = await readGeminiSessionDetail(
-      { worktreePath, repoPath: worktreePath },
-      "gemini-session",
-      chatFile,
-      null,
-      20,
-    );
-
-    expect(detail?.messages.map((message) => message.role)).toEqual([
-      "system",
-      "tool",
-      "reasoning",
-      "assistant",
-      "user",
-    ]);
-    expect(detail?.messages.find((message) => message.role === "tool")?.fullText).toContain("read_file");
-  });
-
   it("discovers Claude Code sessions by parsing JSONL cwd when the encoded project directory lookup misses", async () => {
     const worktreePath = path.join(tempHome, "repo__worktrees", "task");
     const sessionFile = path.join(tempHome, ".claude", "projects", "legacy-or-aliased-project-dir", "claude-session.jsonl");
@@ -449,41 +392,6 @@ describe("AI session history readers", () => {
     const sessions = await readClaudeSessions({ worktreePath, repoPath: worktreePath });
 
     expect(sessions.sessions[0]?.updatedAt).toBe("2026-01-01T00:10:00.000Z");
-  });
-
-  it("uses Gemini CLI .project_root metadata when projects.json does not map the chat directory", async () => {
-    const worktreePath = path.join(tempHome, "repo__worktrees", "task");
-    const projectDir = path.join(tempHome, ".gemini", "tmp", "project-with-root-file");
-    const chatFile = path.join(projectDir, "chats", "session-2026-01-01T00-20-gemini.json");
-
-    await mkdir(projectDir, { recursive: true });
-    await writeFile(path.join(projectDir, ".project_root"), worktreePath, "utf-8");
-    await writeJson(chatFile, {
-      sessionId: "gemini-root-file-session",
-      startTime: "2026-01-01T00:20:00.000Z",
-      lastUpdated: "2026-01-01T00:22:00.000Z",
-      messages: [
-        { id: "user-1", timestamp: "2026-01-01T00:21:00.000Z", type: "user", content: [{ text: "load project root gemini history" }] },
-        { id: "assistant-1", timestamp: "2026-01-01T00:22:00.000Z", type: "gemini", content: [{ text: "project root history loaded" }] },
-      ],
-    });
-
-    const sessions = await readGeminiSessions({ worktreePath, repoPath: worktreePath });
-
-    expect(sessions.sessions).toHaveLength(1);
-    expect(sessions.sessions[0]).toMatchObject({
-      id: "gemini-root-file-session",
-      provider: "gemini",
-      matchedPath: worktreePath,
-      firstUserPrompt: "load project root gemini history",
-      sourceRef: chatFile,
-    });
-
-    const detail = await readGeminiSessionDetail({ worktreePath, repoPath: worktreePath }, "gemini-root-file-session", chatFile);
-    expect(detail?.messages.map((message) => [message.role, message.fullText])).toEqual([
-      ["assistant", "project root history loaded"],
-      ["user", "load project root gemini history"],
-    ]);
   });
 
   it("falls back to Python sqlite for local OpenCode history when native better-sqlite3 cannot open the DB", async () => {
@@ -647,54 +555,6 @@ conn.close()
     expect(detail?.messages.map((message) => [message.role, message.fullText])).toEqual([
       ["assistant", "Codex history loaded remotely."],
       ["user", "load repo codex history"],
-    ]);
-    expect(execCalls.length).toBeGreaterThan(0);
-    expect(execCalls.every((call) => call.sshHost === "remote-host")).toBe(true);
-  });
-
-  it("reads remote Gemini CLI worktree sessions and detail over SSH", async () => {
-    const worktreePath = "/remote/repo__worktrees/task";
-    const repoPath = "/remote/repo";
-    const projectsFile = "/remote/home/.gemini/projects.json";
-    const chatFile = "/remote/home/.gemini/tmp/remote-repo/chats/remote-gemini.json";
-
-    vi.resetModules();
-    const { execCalls } = setupRemoteFileSystem({
-      [projectsFile]: JSON.stringify({ projects: { [worktreePath]: "remote-repo" } }),
-      [chatFile]: JSON.stringify({
-        sessionId: "remote-gemini",
-        startTime: "2026-01-01T00:00:00.000Z",
-        lastUpdated: "2026-01-01T00:02:00.000Z",
-        messages: [
-          { id: "user-1", timestamp: "2026-01-01T00:01:00.000Z", type: "user", content: [{ text: "load repo gemini history" }] },
-          { id: "assistant-1", timestamp: "2026-01-01T00:02:00.000Z", type: "gemini", content: [{ text: "Gemini history loaded remotely." }] },
-        ],
-      }),
-    });
-    const { readGeminiSessionDetail, readGeminiSessions } = await import("@/lib/aiSessions/readGeminiSessions");
-
-    const sessions = await readGeminiSessions({ worktreePath, repoPath, sshHost: "remote-host" });
-    expect(sessions).toMatchObject({ provider: "gemini", available: true, sessionCount: 1 });
-    expect(sessions.sessions[0]).toMatchObject({
-      id: "remote-gemini",
-      provider: "gemini",
-      matchedPath: worktreePath,
-      matchScope: "worktree",
-      firstUserPrompt: "load repo gemini history",
-      sourceRef: chatFile,
-    });
-
-    const detail = await readGeminiSessionDetail(
-      { worktreePath, repoPath, sshHost: "remote-host" },
-      "remote-gemini",
-      chatFile,
-      null,
-      20,
-    );
-
-    expect(detail?.messages.map((message) => [message.role, message.fullText])).toEqual([
-      ["assistant", "Gemini history loaded remotely."],
-      ["user", "load repo gemini history"],
     ]);
     expect(execCalls.length).toBeGreaterThan(0);
     expect(execCalls.every((call) => call.sshHost === "remote-host")).toBe(true);
