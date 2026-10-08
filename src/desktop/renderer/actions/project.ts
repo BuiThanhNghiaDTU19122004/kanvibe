@@ -1,4 +1,5 @@
 import { invokeDesktop } from "@/desktop/renderer/ipc";
+import type { AgentMonitor } from "@/desktop/shared/agentRuntime";
 import { triggerDesktopRefresh } from "@/desktop/renderer/utils/refresh";
 import type { Project } from "@/entities/Project";
 import type {
@@ -13,7 +14,7 @@ import type {
 import type {
   ClaudeHooksStatus,
 } from "@/lib/claudeHooksSetup";
-import type { GeminiHooksStatus } from "@/lib/geminiHooksSetup";
+import type { AntigravityHooksStatus } from "@/lib/antigravityHooksSetup";
 import type { CodexHooksStatus } from "@/lib/codexHooksSetup";
 import type { OpenCodeHooksStatus } from "@/lib/openCodeHooksSetup";
 import type { ScanResult } from "@/desktop/main/services/projectService";
@@ -80,20 +81,20 @@ export function installTaskHooks(taskId: string): Promise<{ success: boolean; er
   return invokeAndRefresh("installTaskHooks", [taskId], { refresh: false });
 }
 
-export function getProjectGeminiHooksStatus(projectId: string): Promise<GeminiHooksStatus | null> {
-  return invokeDesktop("project", "getProjectGeminiHooksStatus", projectId);
+export function getProjectAntigravityHooksStatus(projectId: string): Promise<AntigravityHooksStatus | null> {
+  return invokeDesktop("project", "getProjectAntigravityHooksStatus", projectId);
 }
 
-export function installProjectGeminiHooks(projectId: string): Promise<{ success: boolean; error?: string; status?: GeminiHooksStatus | null }> {
-  return invokeAndRefresh("installProjectGeminiHooks", [projectId], { refresh: false });
+export function installProjectAntigravityHooks(projectId: string): Promise<{ success: boolean; error?: string; status?: AntigravityHooksStatus | null }> {
+  return invokeAndRefresh("installProjectAntigravityHooks", [projectId], { refresh: false });
 }
 
-export function getTaskGeminiHooksStatus(taskId: string): Promise<GeminiHooksStatus | null> {
-  return invokeDesktop("project", "getTaskGeminiHooksStatus", taskId);
+export function getTaskAntigravityHooksStatus(taskId: string): Promise<AntigravityHooksStatus | null> {
+  return invokeDesktop("project", "getTaskAntigravityHooksStatus", taskId);
 }
 
-export function installTaskGeminiHooks(taskId: string): Promise<{ success: boolean; error?: string; status?: GeminiHooksStatus | null }> {
-  return invokeAndRefresh("installTaskGeminiHooks", [taskId], { refresh: false });
+export function installTaskAntigravityHooks(taskId: string): Promise<{ success: boolean; error?: string; status?: AntigravityHooksStatus | null }> {
+  return invokeAndRefresh("installTaskAntigravityHooks", [taskId], { refresh: false });
 }
 
 export function getProjectCodexHooksStatus(projectId: string): Promise<CodexHooksStatus | null> {
@@ -130,6 +131,10 @@ export function getTaskLiveAiSessions(taskId: string): Promise<LiveAiSessionsRes
 
 export function getRunningAgentPanes(): Promise<RunningAgentPane[]> {
   return invokeDesktop("project", "getRunningAgentPanes");
+}
+
+export function getAgentMonitor(): Promise<AgentMonitor> {
+  return invokeDesktop("project", "getAgentMonitor");
 }
 
 export function getTaskAgentCallGraph(
