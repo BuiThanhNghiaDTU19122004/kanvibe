@@ -234,7 +234,7 @@ export async function getDefaultSessionType(): Promise<SessionType> {
   const value = await getAppSetting(DEFAULT_SESSION_TYPE_KEY);
   const knownSessionTypes: string[] = Object.values(SessionType);
 
-  return knownSessionTypes.includes(value ?? "") ? value as SessionType : SessionType.TMUX;
+  return knownSessionTypes.includes(value ?? "") ? value as SessionType : process.platform === "win32" ? SessionType.TERMINAL : SessionType.TMUX;
 }
 
 /** 기본 세션 타입을 저장한다 */
