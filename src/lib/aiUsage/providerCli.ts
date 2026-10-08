@@ -74,10 +74,7 @@ function parseCodexAuthStatus(stdout: string): ProviderAuthStatus | null {
   };
 }
 
-/**
- * Gemini CLI에는 로그인 여부를 물을 수 있는 하위 명령이 없고, 로그인도 첫 실행 화면에서 고르는 방식이다.
- * 그래서 상태는 자격증명 파일로만 판단하고 로그인은 CLI를 그대로 띄워 사용자가 고르게 한다.
- */
+// Antigravity authentication is verified through its read-only quota command.
 const AI_PROVIDER_CLI_SPECS: Record<AiUsageProvider, AiProviderCliSpec> = {
   claude: {
     command: "claude",
@@ -93,8 +90,8 @@ const AI_PROVIDER_CLI_SPECS: Record<AiUsageProvider, AiProviderCliSpec> = {
     statusArgs: ["login", "status"],
     parseStatus: parseCodexAuthStatus,
   },
-  gemini: {
-    command: "gemini",
+  antigravity: {
+    command: "agy",
     loginArgs: [],
     logoutArgs: null,
     statusArgs: null,
@@ -118,6 +115,7 @@ export function createProviderCliEnvironment(
   accountRoot: string,
 ): Record<string, string> {
   const environment = createLocalShellEnvironment();
+  if (spec.provider === "antigravity") return environment;
   if (accountRoot === toDefaultAccountRoot(spec)) {
     delete environment[spec.homeEnvVar];
     return environment;
@@ -155,6 +153,7 @@ function runProviderCli(
       args,
       {
         env: environment,
+        windowsHide: true,
         timeout: PROVIDER_CLI_TIMEOUT_MS,
         maxBuffer: PROVIDER_CLI_OUTPUT_MAX_BYTES,
       },
@@ -180,6 +179,13 @@ export async function readProviderAuthStatus(
   provider: AiUsageProvider,
   accountRoot: string,
 ): Promise<ProviderAuthStatus | null> {
+  if (provider === "antigravity") {
+    const { readAntigravityUsage } = await import("./readAntigravityUsage");
+    const usage = await readAntigravityUsage();
+    if (usage.status === "ok") return { isLoggedIn: true, label: usage.label, planName: usage.planName };
+    if (usage.reason === "missing-credentials") return { isLoggedIn: false, label: null, planName: null };
+    return null;
+  }
   const { statusArgs, parseStatus } = AI_PROVIDER_CLI_SPECS[provider];
   if (!statusArgs) {
     return null;
