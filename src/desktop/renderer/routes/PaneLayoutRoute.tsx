@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import PaneLayoutEditor from "@/components/PaneLayoutEditor";
-import { Link } from "@/desktop/renderer/navigation";
 import { getAllProjects } from "@/desktop/renderer/actions/project";
 import { getGlobalPaneLayout, getProjectPaneLayout } from "@/desktop/renderer/actions/paneLayout";
 import type { PaneLayoutConfig } from "@/entities/PaneLayoutConfig";
@@ -83,18 +82,17 @@ export default function PaneLayoutRoute() {
   }, [refreshSignal]);
 
   if (!state) {
-    return <div className="min-h-screen flex items-center justify-center bg-bg-page text-text-muted">Loading...</div>;
+    return <div className="flex min-h-48 items-center justify-center text-text-muted">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-bg-page p-6">
-      <div className="max-w-2xl mx-auto space-y-8">
+    <div className="w-full">
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-text-primary">{t("title")}</h1>
             <p className="text-sm text-text-secondary mt-1">{t("description")}</p>
           </div>
-          <Link href="/" className="text-sm text-brand-primary hover:underline">{t("backToBoard")}</Link>
         </div>
 
         <section className="bg-bg-surface rounded-xl border border-border-default p-5">
