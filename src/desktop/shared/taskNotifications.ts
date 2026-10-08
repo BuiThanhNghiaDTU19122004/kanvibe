@@ -1,9 +1,20 @@
 import type { DesktopNotificationPayload } from "@/desktop/shared/notifications";
 import type { BackgroundSyncReviewPayload } from "@/lib/boardNotifier";
 
-export type NotificationLocale = "ko" | "en" | "zh";
+export type NotificationLocale = "ko" | "en" | "zh" | "vi";
 
 const NOTIFICATION_MESSAGES = {
+  vi: {
+    formatStatusChanged: (taskTitle: string, newStatus: string) => `${taskTitle}: chuyển sang ${newStatus}`,
+    formatMissingStatus: (requestedStatus: string) => `Không thể chuyển sang trạng thái ${requestedStatus}.`,
+    taskNotFound: "Không tìm thấy công việc tương ứng.",
+    backgroundSyncReviewTitle: "Cần xem lại kết quả đồng bộ",
+    formatMergedPullRequestCount: (count: number) => `${count} PR đã merge`,
+    formatRegisteredWorktreeCount: (count: number) => `${count} worktree mới`,
+    formatUpdatedPullCount: (count: number) => `${count} lần pull thành công`,
+    formatFailedPullCount: (count: number) => `${count} lần pull thất bại`,
+    formatSyncFailureCount: (count: number) => `${count} lỗi đồng bộ`,
+  },
   ko: {
     formatStatusChanged: (taskTitle: string, newStatus: string) => `${taskTitle}: ${newStatus}로 변경`,
     formatMissingStatus: (requestedStatus: string) => `${requestedStatus} 상태로 변경하지 못했습니다.`,
@@ -67,6 +78,7 @@ interface PreparedNotification {
 }
 
 export function getNotificationLocale(locale: string): NotificationLocale {
+  if (locale.startsWith("vi")) return "vi";
   if (locale.startsWith("en")) return "en";
   if (locale.startsWith("zh")) return "zh";
   return "ko";
