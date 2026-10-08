@@ -611,5 +611,23 @@
     "allSetDescription": "环境已就绪。现在您可以指派任务给 Claude Code、Codex 或 Antigravity Agent。",
     "allSetDescriptionWithProjects": "成功注册 {count} 个项目。现在可以创建您的第一个任务了。",
     "getStartedButton": "打开看板"
+  },
+  "dashboard": {
+    "viewKanban": "看板视图",
+    "viewDashboard": "仪表盘",
+    "activeAgents": "活跃智能体",
+    "inProgress": "进行中",
+    "pendingAction": "待确认",
+    "inReview": "审核中",
+    "completed": "已完成",
+    "missionControl": "运行中的 AI 智能体",
+    "noActiveAgents": "当前没有正在运行的 AI 智能体。",
+    "startAgentPrompt": "从任意任务启动智能体后，可在此查看实时运行情况。",
+    "needsAttentionTitle": "需要人工确认的任务",
+    "recentActivity": "最近活动",
+    "openTerminal": "打开终端",
+    "viewDetails": "查看详情",
+    "agentRunningIn": "运行在 {window}",
+    "tasksCompleted": "已完成任务"
   }
 }
