@@ -38,6 +38,7 @@ export const PROMPT_HOOK_SCRIPT_NAME = "kanvibe-prompt-hook.sh";
 export const PERMISSION_HOOK_SCRIPT_NAME = "kanvibe-permission-hook.sh";
 export const PRE_TOOL_HOOK_SCRIPT_NAME = "kanvibe-pre-tool-hook.sh";
 export const STOP_HOOK_SCRIPT_NAME = "kanvibe-stop-hook.sh";
+export const WINDOWS_HOOK_SCRIPT_NAME = "kanvibe-windows-hook.cjs";
 
 const CODEX_PROMPT_COMMAND = buildCodexHookCommand(PROMPT_HOOK_SCRIPT_NAME);
 const CODEX_PERMISSION_COMMAND = buildCodexHookCommand(PERMISSION_HOOK_SCRIPT_NAME);
@@ -80,6 +81,7 @@ export interface CodexHooksStatus extends Partial<ShellHookScriptsStatus> {
   hasHooksFile: boolean;
   hasHookEntries: boolean;
   hasConfigEntry: boolean;
+  hasWindowsHook?: boolean;
 }
 
 /** UserPromptSubmit hook bash 스크립트를 생성한다 */
@@ -125,6 +127,10 @@ export function buildCodexHookFiles(
   return [
     ...buildShellHookScriptFiles(hooksDir, AGENT_LABEL, CODEX_HOOK_SCRIPTS, kanvibeUrl, taskId, sshHost),
     {
+      filePath: pathModule.join(hooksDir, WINDOWS_HOOK_SCRIPT_NAME),
+      content: generateCodexWindowsHookScript(kanvibeUrl, taskId),
+    },
+    {
       filePath: getCodexConfigPath(repoPath, sshHost),
       content: upsertCodexConfigToml(configContent),
     },
@@ -142,22 +148,22 @@ export function upsertCodexHooksJson(hooksContent: string): string {
   hooks.UserPromptSubmit = upsertJsonHookEntries(
     hooks.UserPromptSubmit,
     PROMPT_HOOK_SCRIPT_NAME,
-    buildCommandHookEntry(CODEX_PROMPT_COMMAND, HOOK_TIMEOUT_SECONDS),
+    withWindowsCommand(buildCommandHookEntry(CODEX_PROMPT_COMMAND, HOOK_TIMEOUT_SECONDS), "progress"),
   );
   hooks.PermissionRequest = upsertJsonHookEntries(
     hooks.PermissionRequest,
     PERMISSION_HOOK_SCRIPT_NAME,
-    buildMatcherCommandHookEntry(BASH_MATCHER, CODEX_PERMISSION_COMMAND, HOOK_TIMEOUT_SECONDS),
+    withWindowsCommand(buildMatcherCommandHookEntry(BASH_MATCHER, CODEX_PERMISSION_COMMAND, HOOK_TIMEOUT_SECONDS), "pending"),
   );
   hooks.PreToolUse = upsertJsonHookEntries(
     hooks.PreToolUse,
     PRE_TOOL_HOOK_SCRIPT_NAME,
-    buildMatcherCommandHookEntry(BASH_MATCHER, CODEX_PRE_TOOL_COMMAND, HOOK_TIMEOUT_SECONDS),
+    withWindowsCommand(buildMatcherCommandHookEntry(BASH_MATCHER, CODEX_PRE_TOOL_COMMAND, HOOK_TIMEOUT_SECONDS), "progress"),
   );
   hooks.Stop = upsertJsonHookEntries(
     hooks.Stop,
     STOP_HOOK_SCRIPT_NAME,
-    buildCommandHookEntry(CODEX_STOP_COMMAND, HOOK_TIMEOUT_SECONDS),
+    withWindowsCommand(buildCommandHookEntry(CODEX_STOP_COMMAND, HOOK_TIMEOUT_SECONDS), "review"),
   );
 
   return serializeJsonHookSettings(settings);
@@ -207,11 +213,14 @@ export async function getCodexHooksStatus(
   });
   const [promptScript, permissionScript, preToolScript, stopScript] = state.scriptFiles;
   const hooksFile = state.files.get(hooksPath) ?? { exists: false, content: "" };
-  const hasHookEntries = hasCodexHookEntries(hooksFile.content);
+  const hasHookEntries = hasCodexHookEntries(hooksFile.content, process.platform === "win32" && !sshHost);
   const hasConfigEntry = hasCodexFeatureFlag(state.files.get(configPath)?.content ?? "");
+  const windowsHookPath = resolvePathModule(sshHost).join(repoPath, CONFIG_DIR_NAME, "hooks", WINDOWS_HOOK_SCRIPT_NAME);
+  const hasWindowsHook = process.platform !== "win32" || Boolean(sshHost)
+    || (await readTextFiles([windowsHookPath], sshHost)).get(windowsHookPath)?.exists === true;
 
   return {
-    installed: isShellHookProviderInstalled(state, [hooksFile.exists, hasHookEntries, hasConfigEntry]),
+    installed: isShellHookProviderInstalled(state, [hooksFile.exists, hasHookEntries, hasConfigEntry, hasWindowsHook]),
     hasPromptHook: promptScript.exists,
     hasPermissionHook: permissionScript.exists,
     hasPreToolHook: preToolScript.exists,
@@ -219,21 +228,41 @@ export async function getCodexHooksStatus(
     hasHooksFile: hooksFile.exists,
     hasHookEntries,
     hasConfigEntry,
+    hasWindowsHook,
     ...state.status,
   };
 }
 
-function hasCodexHookEntries(hooksContent: string): boolean {
+function hasCodexHookEntries(hooksContent: string, requireWindowsCommand: boolean): boolean {
   const hooks = parseJsonHookSettings(hooksContent).hooks || {};
-
-  return hasCommandHookEntry(hooks.UserPromptSubmit || [], CODEX_PROMPT_COMMAND)
+  const hasCommands = hasCommandHookEntry(hooks.UserPromptSubmit || [], CODEX_PROMPT_COMMAND)
     && hasMatcherCommandHookEntry(hooks.PermissionRequest || [], BASH_MATCHER, CODEX_PERMISSION_COMMAND)
     && hasMatcherCommandHookEntry(hooks.PreToolUse || [], BASH_MATCHER, CODEX_PRE_TOOL_COMMAND)
     && hasCommandHookEntry(hooks.Stop || [], CODEX_STOP_COMMAND);
+  if (!hasCommands || !requireWindowsCommand) return hasCommands;
+  return ([
+    [hooks.UserPromptSubmit, "progress"],
+    [hooks.PermissionRequest, "pending"],
+    [hooks.PreToolUse, "progress"],
+    [hooks.Stop, "review"],
+  ] as const).every(([entries, status]) => Array.isArray(entries) && entries.some((entry) =>
+    (entry as { hooks?: Array<{ commandWindows?: string }> }).hooks?.some((hook) =>
+      hook.commandWindows?.includes(`'${WINDOWS_HOOK_SCRIPT_NAME}'))('${status}')`) ?? false,
+    ),
+  ));
 }
 
 function buildCodexHookCommand(scriptName: string): string {
   return `bash "$(git rev-parse --show-toplevel)/${CONFIG_DIR_NAME}/hooks/${scriptName}"`;
+}
+
+function withWindowsCommand<T extends { hooks: Array<{ commandWindows?: string }> }>(entry: T, status: string): T {
+  entry.hooks[0].commandWindows = `node -e "require(require('node:path').join(require('node:child_process').execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim(),'.codex','hooks','${WINDOWS_HOOK_SCRIPT_NAME}'))('${status}')"`;
+  return entry;
+}
+
+export function generateCodexWindowsHookScript(kanvibeUrl: string, taskId: string): string {
+  return `// KanVibe Codex hook for native Windows sessions.\nconst fs = require('node:fs');\nconst path = require('node:path');\n\nmodule.exports = async function updateStatus(status) {\n  try {\n    const repoRoot = path.resolve(__dirname, '..', '..');\n    const stateDir = path.join(repoRoot, '.kanvibe');\n    fs.mkdirSync(stateDir, { recursive: true });\n    fs.writeFileSync(path.join(stateDir, 'status.json'), JSON.stringify({\n      schemaVersion: 1, status, updatedAt: new Date().toISOString(),\n    }) + '\\n');\n    const targetsPath = path.join(stateDir, 'targets.json');\n    let targets = [{ url: ${JSON.stringify(kanvibeUrl)}, taskId: ${JSON.stringify(taskId)} }];\n    if (fs.existsSync(targetsPath)) {\n      const parsed = JSON.parse(fs.readFileSync(targetsPath, 'utf8'));\n      if (Array.isArray(parsed.targets) && parsed.targets.length) targets = parsed.targets;\n    }\n    await Promise.allSettled(targets.map(async ({ url, taskId }) => {\n      if (typeof url !== 'string' || typeof taskId !== 'string') return;\n      await fetch(url.replace(/\\/$/, '') + '/api/hooks/status', {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify({ taskId, status }),\n        signal: AbortSignal.timeout(3000),\n      });\n    }));\n  } catch (_) {\n    // A status notification must never interrupt Codex.\n  }\n};\n`;
 }
 
 function getCodexConfigPath(repoPath: string, sshHost?: string | null): string {
