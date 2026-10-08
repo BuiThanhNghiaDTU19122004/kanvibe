@@ -1,4 +1,4 @@
-export type AiSessionProvider = "claude" | "codex" | "opencode" | "gemini";
+export type AiSessionProvider = "claude" | "codex" | "opencode" | "antigravity";
 
 export type AiSessionMatchScope = "worktree";
 
