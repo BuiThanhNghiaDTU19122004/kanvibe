@@ -21,7 +21,8 @@ export default function FolderSearchInput({
   placeholder,
 }: FolderSearchInputProps) {
   const t = useTranslations("settings");
-  const [inputValue, setInputValue] = useState("~/");
+  const isWindowsLocal = !sshHost && /Windows/i.test(navigator.userAgent);
+  const [inputValue, setInputValue] = useState(isWindowsLocal ? "" : "~/");
   const [selectedPath, setSelectedPath] = useState("");
   const [directories, setDirectories] = useState<string[]>([]);
   const [filteredDirs, setFilteredDirs] = useState<FuzzyMatch[]>([]);
@@ -34,9 +35,13 @@ export default function FolderSearchInput({
   const listRef = useRef<HTMLDivElement>(null);
 
   // inputValue에서 탐색할 부모 경로와 검색어를 파싱한다
-  const lastSlash = inputValue.lastIndexOf("/");
-  const parentPath = lastSlash > 0 ? inputValue.substring(0, lastSlash) : "~";
-  const searchTerm = lastSlash >= 0 ? inputValue.substring(lastSlash + 1) : "";
+  const normalizedInput = sshHost ? inputValue : inputValue.replaceAll("\\", "/");
+  const lastSlash = normalizedInput.lastIndexOf("/");
+  const parentPath = lastSlash >= 0
+    ? normalizedInput.slice(0, lastSlash + 1).replace(/\/$/, "") || "/"
+    : isWindowsLocal ? "" : "~";
+  const searchTerm = lastSlash >= 0 ? normalizedInput.slice(lastSlash + 1) : normalizedInput;
+  const joinDirectory = (name: string) => parentPath ? `${parentPath.replace(/\/$/, "")}/${name}` : name;
 
   /** 지정 경로의 하위 디렉토리를 런타임에서 가져온다 */
   const fetchDirectories = useCallback(async (dirPath: string) => {
@@ -95,7 +100,7 @@ export default function FolderSearchInput({
 
   /** 폴더를 선택하여 확정한다 */
   function handleSelect(dirName: string) {
-    const fullPath = parentPath === "~" ? `~/${dirName}` : `${parentPath}/${dirName}`;
+    const fullPath = joinDirectory(dirName);
     setSelectedPath(fullPath);
     setInputValue(fullPath);
     setIsOpen(false);
@@ -125,7 +130,7 @@ export default function FolderSearchInput({
         if (filteredDirs[selectedIndex]) {
           // Tab으로 하위 폴더에 진입: 선택한 폴더명 뒤에 /를 붙여 하위 탐색
           const dirName = filteredDirs[selectedIndex].path;
-          const newPath = parentPath === "~" ? `~/${dirName}/` : `${parentPath}/${dirName}/`;
+          const newPath = `${joinDirectory(dirName).replace(/\/$/, "")}/`;
           setInputValue(newPath);
           setSelectedIndex(0);
         }
