@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createLocalShellEnvironment } from "@/lib/shellEnvironment";
+import { resolveGitBash } from "@/lib/windowsRuntime";
 
 const execFileAsync = promisify(execFile);
 
@@ -121,5 +122,14 @@ export async function checkEnvironment(): Promise<CliToolCheckResult[]> {
     }),
   );
 
+  if (process.platform === "win32") {
+    let version: string | null = null;
+    try {
+      const { stdout } = await execFileAsync(resolveGitBash(), ["--version"], { timeout: 4_000, windowsHide: true, env });
+      version = stdout.trim().split("\n")[0] || null;
+    } catch { /* Required for the existing local Git operations. */ }
+    results.push({ tool: "git-bash", name: "Git Bash", isInstalled: !!version, version,
+      description: "Git for Windows shell", category: "vcs", installCommand: "winget install Git.Git" });
+  }
   return results;
 }
