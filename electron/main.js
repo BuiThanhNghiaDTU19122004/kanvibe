@@ -323,7 +323,7 @@ function getRendererEntryPath() {
 }
 
 function getDefaultRoute() {
-  return `/${DEFAULT_LOCALE}`;
+  return "/";
 }
 
 function isTaskDetailRouteUrl(url) {
@@ -383,7 +383,7 @@ async function didRendererRecoverFromLoadAbort(browserWindow, targetUrl) {
 
 const TITLE_BAR_OVERLAY_THEMES = {
   dark: { color: "#090a0d", symbolColor: "#9ca3af" },
-  light: { color: "#ffffff", symbolColor: "#111827" },
+  light: { color: "#f7f8fa", symbolColor: "#5f636d" },
   dracula: { color: "#282a36", symbolColor: "#f8f8f2" },
   "one-dark": { color: "#21252b", symbolColor: "#abb2bf" },
   "catppuccin-mocha": { color: "#181825", symbolColor: "#cdd6f4" },
@@ -417,6 +417,7 @@ function createBrowserWindowOptions() {
     height: 1000,
     backgroundColor: "#090a0d",
     autoHideMenuBar: true,
+    ...(process.platform === "win32" ? { icon: path.join(app.getAppPath(), "resources", "kanvibe-windows.ico") } : {}),
     ...getTitleBarOptions(),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -442,6 +443,10 @@ function normalizeNotificationLocale(locale) {
 
   if (locale.startsWith("ko")) {
     return "ko";
+  }
+
+  if (locale.startsWith("vi")) {
+    return "vi";
   }
 
   return DEFAULT_LOCALE;
@@ -876,6 +881,7 @@ function registerDesktopHandlers() {
   const { desktopServices } = require(getRuntimeModulePath(path.join("src", "desktop", "main", "serviceRegistry.ts")));
   const {
     openTerminal,
+    launchAgent,
     writeTerminal,
     resizeTerminal,
     focusTerminal,
@@ -962,6 +968,9 @@ function registerDesktopHandlers() {
 
   ipcMain.on("kanvibe:terminal-write", (event, taskId, tabId, data) => {
     writeTerminal(event.sender.id, taskId, tabId, data);
+  });
+  ipcMain.handle("kanvibe:agent-launch", (event, taskId, tabId) => {
+    return launchAgent(event.sender.id, taskId, tabId);
   });
 
   ipcMain.on("kanvibe:terminal-resize", (event, taskId, tabId, cols, rows) => {
