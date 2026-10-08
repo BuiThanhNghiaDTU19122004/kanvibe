@@ -7,6 +7,9 @@ import { parseSSHConfig, type SSHHostConfig } from "@/lib/sshConfig";
 import { ensureRemoteSessionDependency } from "@/lib/remoteSessionDependency";
 import { getEffectivePaneLayout } from "@/desktop/main/services/paneLayoutService";
 import { decodeDataUrlToBuffer, transferImageToRemoteHost } from "@/lib/remoteImagePaste";
+import { launchNativeAgent } from "@/lib/nativeAgentRuntime";
+import type { AgentLaunchResult } from "@/desktop/shared/agentRuntime";
+import type { AiSessionProvider } from "@/lib/aiSessions/types";
 
 const OPEN = 1;
 const CLOSED = 3;
@@ -214,6 +217,21 @@ export function writeTerminal(
   data: string,
 ) {
   getClient(webContentsId, taskId, tabId)?.emitMessage(data);
+}
+
+export async function launchAgent(webContentsId: number, taskId: string, tabId: string | null): Promise<AgentLaunchResult> {
+  const client = getClient(webContentsId, taskId, tabId);
+  if (!client || client.readyState !== OPEN || client.listenerCount("message") === 0) {
+    return { ok: false, code: "terminal-not-ready" };
+  }
+  const task = await (await getTaskRepository()).findOneBy({ id: taskId });
+  if (process.platform !== "win32" || task?.sshHost || task?.sessionType !== SessionType.TERMINAL) {
+    return { ok: false, code: "unsupported-session" };
+  }
+  if (!task.agentType || !["claude", "codex", "opencode", "antigravity"].includes(task.agentType)) {
+    return { ok: false, code: "launch-failed" };
+  }
+  return launchNativeAgent(taskId, tabId, task.agentType as AiSessionProvider, task.description ?? "");
 }
 
 export function resizeTerminal(
