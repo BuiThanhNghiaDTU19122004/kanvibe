@@ -23,7 +23,7 @@ describe("package scripts", () => {
 
     // When / Then
     expect(packageJson.scripts["rebuild:native:electron"]).toBe(
-      "electron-rebuild -f --only better-sqlite3",
+      "node scripts/ensure-native-runtime.cjs --electron",
     );
     expect(packageJson.scripts["rebuild:native:electron"]).not.toContain("--build-from-source");
     expect(packageJson.scripts.dist).toContain(

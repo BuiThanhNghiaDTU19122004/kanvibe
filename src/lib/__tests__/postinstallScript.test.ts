@@ -9,8 +9,8 @@ describe("postinstall script", () => {
       "utf8",
     );
 
-    expect(source).toContain('"--only", "better-sqlite3"');
-    expect(source).toContain("--only better-sqlite3");
+    expect(source).toContain('"ensure-native-runtime.cjs"');
+    expect(source).toContain('"--electron"');
     expect(source).not.toContain("--build-from-source");
     expect(source).not.toContain('"-w", "better-sqlite3"');
     expect(source).not.toContain("-w better-sqlite3");

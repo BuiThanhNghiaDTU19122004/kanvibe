@@ -1,7 +1,11 @@
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath (Split-Path -Parent $PSScriptRoot)
 $pnpm = Join-Path (Get-Location) '.tooling\pnpm\node_modules\pnpm\bin\pnpm.cjs'
-& node $pnpm build
+if (Test-Path -LiteralPath $pnpm) {
+  & node $pnpm build
+} else {
+  & pnpm build
+}
 if ($LASTEXITCODE -ne 0) { throw 'App build failed.' }
 & node -e "require('./build/main/src/lib/sqliteSchema.js').buildSeedDatabase(require('node:path').resolve('resources/database/app.seed.db'))"
 if ($LASTEXITCODE -ne 0) { throw 'Seed database build failed.' }
