@@ -92,8 +92,14 @@ jobs:
           cache-dependency-path: |
             pnpm-lock.yaml
             docs-site/pnpm-lock.yaml
-      - name: Audit app dependencies
-        run: pnpm audit --audit-level high
-      - name: Audit docs dependencies
-        working-directory: docs-site
-        run: pnpm audit --audit-level high
+      - name: Audit app and docs dependencies
+        shell: bash
+        run: |
+          set +e
+          pnpm audit --audit-level high
+          app_status=$?
+          pnpm --dir docs-site audit --audit-level high
+          docs_status=$?
+          if [ "$app_status" -ne 0 ] || [ "$docs_status" -ne 0 ]; then
+            exit 1
+          fi
