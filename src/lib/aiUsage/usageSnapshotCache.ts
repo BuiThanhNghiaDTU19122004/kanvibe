@@ -10,7 +10,7 @@ const CACHE_SCHEMA_VERSION = 1;
 
 const CACHED_ACCOUNT_ID_LENGTH = 16;
 
-const KNOWN_PROVIDERS = new Set(["claude", "codex", "gemini"]);
+const KNOWN_PROVIDERS = new Set(["claude", "codex", "antigravity"]);
 const KNOWN_STATUSES = new Set(["ok", "unavailable", "error"]);
 const KNOWN_WINDOW_KINDS = new Set(["session", "weekly", "monthly", "model"]);
 
