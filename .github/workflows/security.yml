@@ -37,8 +37,16 @@ jobs:
       image: semgrep/semgrep
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Scan source
-        run: semgrep scan --config auto --error
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git fetch origin main
+            semgrep scan --config auto --baseline-commit "$(git merge-base HEAD origin/main)" --error
+          else
+            semgrep scan --config auto
+          fi
 
   codeql:
     name: CodeQL JavaScript and TypeScript
