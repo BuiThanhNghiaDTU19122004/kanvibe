@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import enMessages from "../../../../messages/en.json";
 import App from "@/desktop/renderer/App";
 import type { AppNotification } from "@/desktop/shared/notifications";
 
@@ -29,6 +30,8 @@ vi.mock("@/desktop/renderer/routes/BoardRoute", () => ({
 vi.mock("@/desktop/renderer/routes/DiffRoute", () => ({
   default: () => <div>diff route</div>,
 }));
+
+vi.mock("@/desktop/renderer/routes/AiAccountsRoute", () => ({ default: () => <div>ai accounts route</div> }));
 
 vi.mock("@/desktop/renderer/routes/PaneLayoutRoute", () => ({
   default: () => <div>pane layout route</div>,
@@ -63,6 +66,16 @@ vi.mock("@/desktop/renderer/components/BoardEventAlert", () => ({
 }));
 
 describe("App", () => {
+  it("restores the current saved language when returning to root after mount", async () => {
+    window.location.hash = "#/en";
+    render(<App />);
+    await screen.findByText("board route");
+    localStorage.setItem("kanvibe:locale", "vi");
+    await act(async () => { window.location.hash = "#/"; });
+    await waitFor(() => expect(window.location.hash).toBe("#/vi"));
+    expect(document.documentElement.lang).toBe("vi");
+    localStorage.removeItem("kanvibe:locale");
+  });
   let boardEventListener: ((event: { type: string }) => void) | null = null;
   let terminalTabShortcutListener: ((command: { type: string }) => void) | null = null;
   const closeCurrentWindow = vi.fn();
@@ -171,6 +184,37 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByText("settings route")).toBeTruthy();
     });
+  });
+
+  it("keeps the sidebar and active menu item when opening AI from its old URL", async () => {
+    window.location.hash = "#/en/ai-accounts";
+    render(<App />);
+    await screen.findByText("ai accounts route");
+    expect(window.location.hash).toBe("#/en/settings/ai-accounts");
+    expect(screen.getByTestId("settings-layout")).toBeTruthy();
+    expect(screen.getByRole("link", { name: enMessages.settings.aiAccountsLink }).getAttribute("aria-current")).toBe("page");
+    fireEvent.click(screen.getByRole("link", { name: enMessages.settings.notificationSection }));
+    await screen.findByText("settings route");
+    expect(window.location.hash).toBe("#/en/settings/notifications");
+    expect(screen.queryByText("ai accounts route")).toBeNull();
+    expect(screen.getByRole("link", { name: enMessages.settings.notificationSection }).getAttribute("aria-current")).toBe("page");
+  });
+
+  it("preserves old terminal layout links inside settings", async () => {
+    window.location.hash = "#/en/pane-layout";
+    render(<App />);
+    await screen.findByText("pane layout route");
+    expect(window.location.hash).toBe("#/en/settings/pane-layout");
+    expect(screen.getByRole("navigation")).toBeTruthy();
+  });
+
+  it("places the shared sidebar below the macOS caption buttons", async () => {
+    Object.defineProperty(navigator, "platform", { configurable: true, value: "MacIntel" });
+    window.location.hash = "#/en/settings/appearance";
+    const { container } = render(<App />);
+    await screen.findByText("settings route");
+    expect(container.querySelector("aside")?.className).toContain("pt-16");
+    Object.defineProperty(navigator, "platform", { configurable: true, value: "Linux" });
   });
 
   it("debounces board update events and refreshes all visible data", async () => {
