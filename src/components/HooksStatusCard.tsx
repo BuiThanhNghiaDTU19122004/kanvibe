@@ -10,40 +10,40 @@ import {
 import { useTranslations } from "next-intl";
 import {
   getTaskCodexHooksStatus,
-  getTaskGeminiHooksStatus,
+  getTaskAntigravityHooksStatus,
   getTaskHooksStatus,
   getTaskOpenCodeHooksStatus,
   installTaskCodexHooks,
-  installTaskGeminiHooks,
+  installTaskAntigravityHooks,
   installTaskHooks,
   installTaskOpenCodeHooks,
 } from "@/desktop/renderer/actions/project";
 import { AiProviderIcon, type AiProviderIconName } from "@/components/AiProviderIcon";
 import type { ClaudeHooksStatus } from "@/lib/claudeHooksSetup";
 import type { CodexHooksStatus } from "@/lib/codexHooksSetup";
-import type { GeminiHooksStatus } from "@/lib/geminiHooksSetup";
+import type { AntigravityHooksStatus } from "@/lib/antigravityHooksSetup";
 import type { OpenCodeHooksStatus } from "@/lib/openCodeHooksSetup";
 
 interface HooksStatusCardProps {
   taskId: string;
   initialClaudeStatus: ClaudeHooksStatus | null;
-  initialGeminiStatus: GeminiHooksStatus | null;
+  initialAntigravityStatus: AntigravityHooksStatus | null;
   initialCodexStatus: CodexHooksStatus | null;
   initialOpenCodeStatus: OpenCodeHooksStatus | null;
   isRemote: boolean;
   onStatusesChange?: (updates: {
     claudeStatus?: ClaudeHooksStatus | null;
-    geminiStatus?: GeminiHooksStatus | null;
+    antigravityStatus?: AntigravityHooksStatus | null;
     codexStatus?: CodexHooksStatus | null;
     openCodeStatus?: OpenCodeHooksStatus | null;
   }) => void;
 }
 
-type HookToolKey = "claude" | "gemini" | "codex" | "openCode";
+type HookToolKey = "claude" | "antigravity" | "codex" | "openCode";
 type InstallMessage = { type: "success" | "error"; text: string };
 type HookStatusUpdates = {
   claudeStatus?: ClaudeHooksStatus | null;
-  geminiStatus?: GeminiHooksStatus | null;
+  antigravityStatus?: AntigravityHooksStatus | null;
   codexStatus?: CodexHooksStatus | null;
   openCodeStatus?: OpenCodeHooksStatus | null;
 };
@@ -51,14 +51,14 @@ type HookStatusUpdates = {
 export default function HooksStatusCard({
   taskId,
   initialClaudeStatus,
-  initialGeminiStatus,
+  initialAntigravityStatus,
   initialCodexStatus,
   initialOpenCodeStatus,
   onStatusesChange,
 }: HooksStatusCardProps) {
   const t = useTranslations("taskDetail");
   const [claudeStatus, setClaudeStatus] = useState(initialClaudeStatus);
-  const [geminiStatus, setGeminiStatus] = useState(initialGeminiStatus);
+  const [antigravityStatus, setAntigravityStatus] = useState(initialAntigravityStatus);
   const [codexStatus, setCodexStatus] = useState(initialCodexStatus);
   const [openCodeStatus, setOpenCodeStatus] = useState(initialOpenCodeStatus);
   const [installingTools, setInstallingTools] = useState<HookToolKey[]>([]);
@@ -74,8 +74,8 @@ export default function HooksStatusCard({
   }, [initialClaudeStatus]);
 
   useEffect(() => {
-    setGeminiStatus(initialGeminiStatus);
-  }, [initialGeminiStatus]);
+    setAntigravityStatus(initialAntigravityStatus);
+  }, [initialAntigravityStatus]);
 
   useEffect(() => {
     setCodexStatus(initialCodexStatus);
@@ -120,14 +120,14 @@ export default function HooksStatusCard({
       }),
     },
     {
-      key: "gemini" as const,
-      title: "Gemini",
-      status: geminiStatus,
-      install: () => runInstall("gemini", () => installTaskGeminiHooks(taskId), (result) => {
+      key: "antigravity" as const,
+      title: "Antigravity",
+      status: antigravityStatus,
+      install: () => runInstall("antigravity", () => installTaskAntigravityHooks(taskId), (result) => {
         if (result.success && result.status) {
-          setGeminiStatus(result.status);
-          onStatusesChange?.({ geminiStatus: result.status });
-          setMessage(getResultMessage(result.status.installed, t("geminiHooksInstallSuccess"), t));
+          setAntigravityStatus(result.status);
+          onStatusesChange?.({ antigravityStatus: result.status });
+          setMessage(getResultMessage(result.status.installed, t("antigravityHooksInstallSuccess"), t));
           return;
         }
 
@@ -189,16 +189,16 @@ export default function HooksStatusCard({
   }
 
   async function refreshAllHookStatuses() {
-    const [latestClaudeStatus, latestGeminiStatus, latestCodexStatus, latestOpenCodeStatus] = await Promise.all([
+    const [latestClaudeStatus, latestAntigravityStatus, latestCodexStatus, latestOpenCodeStatus] = await Promise.all([
       getTaskHooksStatus(taskId),
-      getTaskGeminiHooksStatus(taskId),
+      getTaskAntigravityHooksStatus(taskId),
       getTaskCodexHooksStatus(taskId),
       getTaskOpenCodeHooksStatus(taskId),
     ]);
 
     applyRefreshedStatuses({
       claudeStatus: latestClaudeStatus,
-      geminiStatus: latestGeminiStatus,
+      antigravityStatus: latestAntigravityStatus,
       codexStatus: latestCodexStatus,
       openCodeStatus: latestOpenCodeStatus,
     });
@@ -211,9 +211,9 @@ export default function HooksStatusCard({
       setClaudeStatus(updates.claudeStatus);
       parentUpdates.claudeStatus = updates.claudeStatus;
     }
-    if (updates.geminiStatus) {
-      setGeminiStatus(updates.geminiStatus);
-      parentUpdates.geminiStatus = updates.geminiStatus;
+    if (updates.antigravityStatus) {
+      setAntigravityStatus(updates.antigravityStatus);
+      parentUpdates.antigravityStatus = updates.antigravityStatus;
     }
     if (updates.codexStatus) {
       setCodexStatus(updates.codexStatus);
@@ -368,7 +368,7 @@ function StatusIcon({ status }: { status: "ok" | "partial" | "error" }) {
 function HookToolIcon({ tool }: { tool: HookToolKey }) {
   const providerByTool: Record<HookToolKey, AiProviderIconName> = {
     claude: "claude",
-    gemini: "gemini",
+    antigravity: "antigravity",
     codex: "codex",
     openCode: "opencode",
   };
