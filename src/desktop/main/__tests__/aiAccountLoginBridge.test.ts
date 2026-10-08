@@ -1,11 +1,14 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebContents } from "electron";
 import { openAiAccountLogin, closeWindowAiAccountLogins } from "../aiAccountLoginBridge";
 
-const { spawn, prepare, dispose } = vi.hoisted(() => ({ spawn: vi.fn(), prepare: vi.fn(), dispose: vi.fn() }));
+const { spawn, prepare, dispose, auth } = vi.hoisted(() => ({ spawn: vi.fn(), prepare: vi.fn(), dispose: vi.fn(), auth: vi.fn() }));
+vi.mock("@/lib/aiUsage/providerCli", async (original) => ({ ...await original<typeof import("@/lib/aiUsage/providerCli")>(), readProviderAuthStatus: auth }));
 vi.mock("node-pty", () => ({ spawn }));
 vi.mock("../loginBrowser", () => ({ prepareLoginBrowser: prepare }));
+beforeEach(() => auth.mockResolvedValue(null));
+
 afterEach(() => { closeWindowAiAccountLogins(42); vi.resetAllMocks(); });
 
 describe("CLI login sessions", () => {
@@ -28,9 +31,28 @@ describe("CLI login sessions", () => {
     spawn.mockReturnValue({ onData: vi.fn(), onExit: vi.fn(), kill: vi.fn() });
     await openAiAccountLogin(contents, "antigravity", "antigravity-default", 80, 24);
     expect(spawn).toHaveBeenCalledWith("agy", [], expect.objectContaining({
-      cwd: process.env.HOME,
+      cwd: expect.any(String),
     }));
-    expect(spawn.mock.calls[0][2].env.GEMINI_CLI_HOME).not.toBe("antigravity-default");
+    expect(spawn.mock.calls[0][2].env.ANTIGRAVITY_CLI_HOME).not.toBe("antigravity-default");
+  });
+
+  it("reuses an authenticated Antigravity account without opening a terminal", async () => {
+    auth.mockResolvedValue({ isLoggedIn: true });
+    expect(await openAiAccountLogin(contents, "antigravity", "antigravity-default", 80, 24)).toEqual({ ok: true, authenticated: true });
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
+  it("closes its CLI once authentication succeeds", async () => {
+    vi.useFakeTimers();
+    auth.mockResolvedValueOnce({ isLoggedIn: false }).mockResolvedValue({ isLoggedIn: true });
+    prepare.mockResolvedValue(dispose);
+    const pty = { onData: vi.fn(), onExit: vi.fn(), kill: vi.fn() };
+    spawn.mockReturnValue(pty);
+    await openAiAccountLogin(contents, "antigravity", "antigravity-default", 80, 24);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(pty.kill).toHaveBeenCalledOnce();
+    expect(contents.send).toHaveBeenCalledWith("kanvibe:ai-login-exit", { accountRoot: "antigravity-default", exitCode: 0 });
+    vi.useRealTimers();
   });
 
   it("cleans up and returns a useful error when the CLI is missing", async () => {
