@@ -7,31 +7,31 @@ import HooksStatusDialog from "@/components/HooksStatusDialog";
 
 const {
   mockInstallTaskHooks,
-  mockInstallTaskGeminiHooks,
+  mockInstallTaskAntigravityHooks,
   mockInstallTaskCodexHooks,
   mockInstallTaskOpenCodeHooks,
   mockGetTaskHooksStatus,
-  mockGetTaskGeminiHooksStatus,
+  mockGetTaskAntigravityHooksStatus,
   mockGetTaskCodexHooksStatus,
   mockGetTaskOpenCodeHooksStatus,
 } = vi.hoisted(() => ({
   mockInstallTaskHooks: vi.fn(),
-  mockInstallTaskGeminiHooks: vi.fn(),
+  mockInstallTaskAntigravityHooks: vi.fn(),
   mockInstallTaskCodexHooks: vi.fn(),
   mockInstallTaskOpenCodeHooks: vi.fn(),
   mockGetTaskHooksStatus: vi.fn(),
-  mockGetTaskGeminiHooksStatus: vi.fn(),
+  mockGetTaskAntigravityHooksStatus: vi.fn(),
   mockGetTaskCodexHooksStatus: vi.fn(),
   mockGetTaskOpenCodeHooksStatus: vi.fn(),
 }));
 
 vi.mock("@/desktop/renderer/actions/project", () => ({
   installTaskHooks: mockInstallTaskHooks,
-  installTaskGeminiHooks: mockInstallTaskGeminiHooks,
+  installTaskAntigravityHooks: mockInstallTaskAntigravityHooks,
   installTaskCodexHooks: mockInstallTaskCodexHooks,
   installTaskOpenCodeHooks: mockInstallTaskOpenCodeHooks,
   getTaskHooksStatus: mockGetTaskHooksStatus,
-  getTaskGeminiHooksStatus: mockGetTaskGeminiHooksStatus,
+  getTaskAntigravityHooksStatus: mockGetTaskAntigravityHooksStatus,
   getTaskCodexHooksStatus: mockGetTaskCodexHooksStatus,
   getTaskOpenCodeHooksStatus: mockGetTaskOpenCodeHooksStatus,
 }));
@@ -49,7 +49,7 @@ describe("HooksStatusDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetTaskHooksStatus.mockResolvedValue(null);
-    mockGetTaskGeminiHooksStatus.mockResolvedValue(null);
+    mockGetTaskAntigravityHooksStatus.mockResolvedValue(null);
     mockGetTaskCodexHooksStatus.mockResolvedValue(null);
     mockGetTaskOpenCodeHooksStatus.mockResolvedValue(null);
   });
@@ -72,7 +72,7 @@ describe("HooksStatusDialog", () => {
     hasStatusMappings: true,
   };
 
-  const verifiedGeminiStatus = {
+  const verifiedAntigravityStatus = {
     installed: true,
     hasPromptHook: true,
     hasStopHook: true,
@@ -138,7 +138,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -158,7 +158,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -178,7 +178,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -195,7 +195,7 @@ describe("HooksStatusDialog", () => {
     ]);
     expect(toolIcons.map((icon) => icon.getAttribute("data-icon-name"))).toEqual([
       "Claude",
-      "Gemini",
+      "Antigravity",
       "Codex",
       "OpenCode",
     ]);
@@ -208,7 +208,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: true,
@@ -232,7 +232,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -259,14 +259,14 @@ describe("HooksStatusDialog", () => {
     mockInstallTaskHooks.mockImplementation(() => new Promise((resolve) => {
       resolveClaudeInstall = resolve;
     }));
-    mockInstallTaskGeminiHooks.mockResolvedValue({ success: true, status: verifiedGeminiStatus });
+    mockInstallTaskAntigravityHooks.mockResolvedValue({ success: true, status: verifiedAntigravityStatus });
 
     renderDialog({
       isOpen: true,
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -277,12 +277,12 @@ describe("HooksStatusDialog", () => {
     fireEvent.click(installButtons[1]);
 
     await waitFor(() => {
-      expect(mockInstallTaskGeminiHooks).toHaveBeenCalledWith("task-1");
+      expect(mockInstallTaskAntigravityHooks).toHaveBeenCalledWith("task-1");
     });
 
     resolveClaudeInstall?.({ success: true, status: verifiedClaudeStatus });
     await waitFor(() => {
-      expect(screen.getByText("geminiHooksInstallSuccess")).toBeTruthy();
+      expect(screen.getByText("antigravityHooksInstallSuccess")).toBeTruthy();
     });
   });
 
@@ -298,7 +298,7 @@ describe("HooksStatusDialog", () => {
       onClose,
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -323,7 +323,7 @@ describe("HooksStatusDialog", () => {
       onClose,
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -346,7 +346,7 @@ describe("HooksStatusDialog", () => {
       onClose,
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -368,7 +368,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -392,7 +392,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -416,7 +416,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -432,15 +432,15 @@ describe("HooksStatusDialog", () => {
     });
   });
 
-  it("should call installTaskGeminiHooks when Gemini install button is clicked", async () => {
+  it("should call installTaskAntigravityHooks when Antigravity install button is clicked", async () => {
     // Given
-    mockInstallTaskGeminiHooks.mockResolvedValue({ success: true, status: verifiedGeminiStatus });
+    mockInstallTaskAntigravityHooks.mockResolvedValue({ success: true, status: verifiedAntigravityStatus });
     const props = {
       isOpen: true,
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -452,19 +452,19 @@ describe("HooksStatusDialog", () => {
 
     // Then
     await waitFor(() => {
-      expect(mockInstallTaskGeminiHooks).toHaveBeenCalledWith("task-1");
+      expect(mockInstallTaskAntigravityHooks).toHaveBeenCalledWith("task-1");
     });
   });
 
-  it("should show Gemini success message when Gemini hooks installation succeeds", async () => {
+  it("should show Antigravity success message when Antigravity hooks installation succeeds", async () => {
     // Given
-    mockInstallTaskGeminiHooks.mockResolvedValue({ success: true, status: verifiedGeminiStatus });
+    mockInstallTaskAntigravityHooks.mockResolvedValue({ success: true, status: verifiedAntigravityStatus });
     const props = {
       isOpen: true,
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -476,7 +476,7 @@ describe("HooksStatusDialog", () => {
 
     // Then
     await waitFor(() => {
-      expect(screen.getByText("geminiHooksInstallSuccess")).toBeTruthy();
+      expect(screen.getByText("antigravityHooksInstallSuccess")).toBeTruthy();
     });
   });
 
@@ -488,7 +488,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: verifiedGeminiStatus,
+      antigravityStatus: verifiedAntigravityStatus,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -512,7 +512,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: verifiedGeminiStatus,
+      antigravityStatus: verifiedAntigravityStatus,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -536,7 +536,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: verifiedGeminiStatus,
+      antigravityStatus: verifiedAntigravityStatus,
       codexStatus: verifiedCodexStatus,
       openCodeStatus: null,
       isRemote: false,
@@ -560,7 +560,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: verifiedGeminiStatus,
+      antigravityStatus: verifiedAntigravityStatus,
       codexStatus: verifiedCodexStatus,
       openCodeStatus: null,
       isRemote: false,
@@ -584,7 +584,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: verifiedGeminiStatus,
+      antigravityStatus: verifiedAntigravityStatus,
       codexStatus: verifiedCodexStatus,
       openCodeStatus: null,
       isRemote: false,
@@ -606,7 +606,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: verifiedGeminiStatus,
+      antigravityStatus: verifiedAntigravityStatus,
       codexStatus: verifiedCodexStatus,
       openCodeStatus: null,
       isRemote: false,
@@ -631,7 +631,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: verifiedGeminiStatus,
+      antigravityStatus: verifiedAntigravityStatus,
       codexStatus: verifiedCodexStatus,
       openCodeStatus: null,
       isRemote: false,
@@ -659,7 +659,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: verifiedGeminiStatus,
+      antigravityStatus: verifiedAntigravityStatus,
       codexStatus: verifiedCodexStatus,
       openCodeStatus: null,
       isRemote: false,
@@ -684,7 +684,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -706,7 +706,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: verifiedClaudeStatus,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -723,7 +723,7 @@ describe("HooksStatusDialog", () => {
     const onStatusesChange = vi.fn();
     mockInstallTaskHooks.mockResolvedValue({ success: true, status: verifiedClaudeStatus });
     mockGetTaskHooksStatus.mockResolvedValue(verifiedClaudeStatus);
-    mockGetTaskGeminiHooksStatus.mockResolvedValue(verifiedGeminiStatus);
+    mockGetTaskAntigravityHooksStatus.mockResolvedValue(verifiedAntigravityStatus);
     mockGetTaskCodexHooksStatus.mockResolvedValue(verifiedCodexStatus);
     mockGetTaskOpenCodeHooksStatus.mockResolvedValue(verifiedOpenCodeStatus);
 
@@ -732,7 +732,7 @@ describe("HooksStatusDialog", () => {
       onClose: vi.fn(),
       taskId: "task-1",
       claudeStatus: null,
-      geminiStatus: null,
+      antigravityStatus: null,
       codexStatus: null,
       openCodeStatus: null,
       isRemote: false,
@@ -744,7 +744,7 @@ describe("HooksStatusDialog", () => {
     await waitFor(() => {
       expect(onStatusesChange).toHaveBeenCalledWith({
         claudeStatus: verifiedClaudeStatus,
-        geminiStatus: verifiedGeminiStatus,
+        antigravityStatus: verifiedAntigravityStatus,
         codexStatus: verifiedCodexStatus,
         openCodeStatus: verifiedOpenCodeStatus,
       });
