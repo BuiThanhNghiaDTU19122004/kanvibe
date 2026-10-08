@@ -1,4 +1,6 @@
 import path from "path";
+import { WINDOWS_AGENT_BOOTSTRAP } from "@/lib/windowsAgentCommand";
+import { homedir } from "os";
 import { existsSync } from "fs";
 import { SessionType } from "@/entities/KanbanTask";
 import { PaneLayoutType } from "@/entities/PaneLayoutConfig";
@@ -31,9 +33,26 @@ interface TerminalEntry {
   sessionName: string;
   taskId: string;
   tabId: string | null;
+  worktreePath?: string | null;
 }
 
 const activeTerminals = new Map<string, TerminalEntry>();
+
+/** Only processes owned by KanVibe are inspected; never enumerate external agent conversations. */
+export function getNativeTerminalSnapshots() {
+  return [...activeTerminals.values()]
+    .filter((entry) => entry.sessionType === SessionType.TERMINAL)
+    .map((entry) => ({ taskId: entry.taskId, tabId: entry.tabId, pid: entry.pty.pid,
+      sessionName: entry.sessionName, worktreePath: entry.worktreePath ?? "",
+      windowName: localTerminalTabs.get(entry.taskId)?.tabs.find((tab) => tab.id === entry.tabId)?.name ?? "PowerShell" }));
+}
+
+export function writeNativeTerminal(taskId: string, tabId: string | null, command: string): boolean {
+  const entry = activeTerminals.get(buildTerminalKey(taskId, tabId));
+  if (!entry || entry.sessionType !== SessionType.TERMINAL) return false;
+  entry.pty.write(command);
+  return true;
+}
 
 /**
  * tmux와 zellij는 태스크당 PTY 하나를 멀티플렉서에 붙이고 탭은 멀티플렉서 안에 있다.
@@ -425,6 +444,7 @@ function bootstrapLocalTmuxSession(
 
 /** 로그인 셸을 그대로 띄워, 사용자가 평소 쓰는 셸 설정을 받게 한다 */
 function resolveLoginShell(): string {
+  if (process.platform === "win32") return "powershell.exe";
   return process.env.SHELL || "/bin/sh";
 }
 
@@ -445,10 +465,10 @@ function buildLocalPtySpawnPlan(
   cwd: string | null | undefined,
   zellijNeedsCreation: boolean,
 ): LocalPtySpawnPlan {
-  const homeDirectory = process.env.HOME || "/";
+  const homeDirectory = process.env.HOME || homedir();
 
   if (sessionType === SessionType.TERMINAL) {
-    return { shell: resolveLoginShell(), args: ["-l"], cwd: cwd || homeDirectory };
+      return { shell: resolveLoginShell(), args: process.platform === "win32" ? ["-NoLogo", "-NoExit", "-Command", WINDOWS_AGENT_BOOTSTRAP] : ["-l"], cwd: cwd || homeDirectory };
   }
 
   if (sessionType === SessionType.TMUX) {
@@ -552,7 +572,7 @@ export async function attachLocalSession(
 
   registerTerminalEntry(
     terminalKey,
-    { pty: ptyProcess, clients: new Set([ws]), sessionType, sessionName, taskId, tabId },
+    { pty: ptyProcess, clients: new Set([ws]), sessionType, sessionName, taskId, tabId, worktreePath: cwd },
     ws,
     "Local",
   );
