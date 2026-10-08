@@ -6,31 +6,31 @@ import HooksStatusCard from "@/components/HooksStatusCard";
 
 const {
   mockInstallTaskHooks,
-  mockInstallTaskGeminiHooks,
+  mockInstallTaskAntigravityHooks,
   mockInstallTaskCodexHooks,
   mockInstallTaskOpenCodeHooks,
   mockGetTaskHooksStatus,
-  mockGetTaskGeminiHooksStatus,
+  mockGetTaskAntigravityHooksStatus,
   mockGetTaskCodexHooksStatus,
   mockGetTaskOpenCodeHooksStatus,
 } = vi.hoisted(() => ({
   mockInstallTaskHooks: vi.fn(),
-  mockInstallTaskGeminiHooks: vi.fn(),
+  mockInstallTaskAntigravityHooks: vi.fn(),
   mockInstallTaskCodexHooks: vi.fn(),
   mockInstallTaskOpenCodeHooks: vi.fn(),
   mockGetTaskHooksStatus: vi.fn(),
-  mockGetTaskGeminiHooksStatus: vi.fn(),
+  mockGetTaskAntigravityHooksStatus: vi.fn(),
   mockGetTaskCodexHooksStatus: vi.fn(),
   mockGetTaskOpenCodeHooksStatus: vi.fn(),
 }));
 
 vi.mock("@/desktop/renderer/actions/project", () => ({
   installTaskHooks: mockInstallTaskHooks,
-  installTaskGeminiHooks: mockInstallTaskGeminiHooks,
+  installTaskAntigravityHooks: mockInstallTaskAntigravityHooks,
   installTaskCodexHooks: mockInstallTaskCodexHooks,
   installTaskOpenCodeHooks: mockInstallTaskOpenCodeHooks,
   getTaskHooksStatus: mockGetTaskHooksStatus,
-  getTaskGeminiHooksStatus: mockGetTaskGeminiHooksStatus,
+  getTaskAntigravityHooksStatus: mockGetTaskAntigravityHooksStatus,
   getTaskCodexHooksStatus: mockGetTaskCodexHooksStatus,
   getTaskOpenCodeHooksStatus: mockGetTaskOpenCodeHooksStatus,
 }));
@@ -66,7 +66,7 @@ const messages = {
     installHooks: "Install Hooks",
     installingHooks: "Installing...",
     hooksInstallSuccess: "Hooks installed successfully",
-    geminiHooksInstallSuccess: "Gemini CLI hooks installed",
+    antigravityHooksInstallSuccess: "Antigravity CLI hooks installed",
     codexHooksInstallSuccess: "Codex CLI hooks installed",
     openCodeHooksInstallSuccess: "OpenCode hooks installed",
     hooksInstallIncomplete: "Hooks were installed, but verification is incomplete.",
@@ -83,7 +83,7 @@ describe("HooksStatusCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetTaskHooksStatus.mockResolvedValue(null);
-    mockGetTaskGeminiHooksStatus.mockResolvedValue(null);
+    mockGetTaskAntigravityHooksStatus.mockResolvedValue(null);
     mockGetTaskCodexHooksStatus.mockResolvedValue(null);
     mockGetTaskOpenCodeHooksStatus.mockResolvedValue(null);
   });
@@ -104,7 +104,7 @@ describe("HooksStatusCard", () => {
     renderCard({
       taskId: "task-1",
       initialClaudeStatus: null,
-      initialGeminiStatus: null,
+      initialAntigravityStatus: null,
       initialCodexStatus: null,
       initialOpenCodeStatus: null,
       isRemote: false,
@@ -112,7 +112,7 @@ describe("HooksStatusCard", () => {
 
     expect(screen.getByText("Hooks Status")).toBeTruthy();
     expect(screen.getByText("Claude")).toBeTruthy();
-    expect(screen.getByText("Gemini")).toBeTruthy();
+    expect(screen.getByText("Antigravity")).toBeTruthy();
     expect(screen.getByText("Codex")).toBeTruthy();
     expect(screen.getByText("OpenCode")).toBeTruthy();
     expect(screen.queryByTestId("hooks-status-dialog")).toBeNull();
@@ -122,7 +122,7 @@ describe("HooksStatusCard", () => {
     renderCard({
       taskId: "task-1",
       initialClaudeStatus: null,
-      initialGeminiStatus: null,
+      initialAntigravityStatus: null,
       initialCodexStatus: null,
       initialOpenCodeStatus: null,
       isRemote: false,
@@ -139,7 +139,7 @@ describe("HooksStatusCard", () => {
     ]);
     expect(toolIcons.map((icon) => icon.getAttribute("data-icon-name"))).toEqual([
       "Claude",
-      "Gemini",
+      "Antigravity",
       "Codex",
       "OpenCode",
     ]);
@@ -150,7 +150,7 @@ describe("HooksStatusCard", () => {
     renderCard({
       taskId: "task-1",
       initialClaudeStatus: { installed: true, hasPromptHook: true, hasStopHook: true, hasQuestionHook: true, hasSettingsEntry: true },
-      initialGeminiStatus: null,
+      initialAntigravityStatus: null,
       initialCodexStatus: null,
       initialOpenCodeStatus: null,
       isRemote: false,
@@ -163,7 +163,7 @@ describe("HooksStatusCard", () => {
     renderCard({
       taskId: "task-remote",
       initialClaudeStatus: null,
-      initialGeminiStatus: null,
+      initialAntigravityStatus: null,
       initialCodexStatus: null,
       initialOpenCodeStatus: null,
       isRemote: true,
@@ -174,7 +174,7 @@ describe("HooksStatusCard", () => {
 
   it("installs Claude hooks from the inline action and updates local status", async () => {
     const installedClaudeStatus = { installed: true, hasPromptHook: true, hasStopHook: true, hasQuestionHook: true, hasSettingsEntry: true };
-    const installedGeminiStatus = { installed: true, hasPromptHook: true, hasStopHook: true, hasSettingsEntry: true };
+    const installedAntigravityStatus = { installed: true, hasPromptHook: true, hasStopHook: true, hasSettingsEntry: true };
     const installedCodexStatus = { installed: true, hasPromptHook: true, hasPermissionHook: true, hasPreToolHook: true, hasStopHook: true, hasHooksFile: true, hasHookEntries: true, hasConfigEntry: true };
     const installedOpenCodeStatus = { installed: true, hasPlugin: true, hasTaskIdBinding: true, hasStatusEndpoint: true, hasEventMappings: true, hasMainSessionGuard: true, hasDuplicateProgressGuard: true };
     mockInstallTaskHooks.mockResolvedValue({
@@ -182,7 +182,7 @@ describe("HooksStatusCard", () => {
       status: installedClaudeStatus,
     });
     mockGetTaskHooksStatus.mockResolvedValue(installedClaudeStatus);
-    mockGetTaskGeminiHooksStatus.mockResolvedValue(installedGeminiStatus);
+    mockGetTaskAntigravityHooksStatus.mockResolvedValue(installedAntigravityStatus);
     mockGetTaskCodexHooksStatus.mockResolvedValue(installedCodexStatus);
     mockGetTaskOpenCodeHooksStatus.mockResolvedValue(installedOpenCodeStatus);
     const onStatusesChange = vi.fn();
@@ -190,7 +190,7 @@ describe("HooksStatusCard", () => {
     renderCard({
       taskId: "task-1",
       initialClaudeStatus: null,
-      initialGeminiStatus: null,
+      initialAntigravityStatus: null,
       initialCodexStatus: null,
       initialOpenCodeStatus: null,
       isRemote: false,
@@ -203,7 +203,7 @@ describe("HooksStatusCard", () => {
       expect(mockInstallTaskHooks).toHaveBeenCalledWith("task-1");
       expect(onStatusesChange).toHaveBeenCalledWith({
         claudeStatus: installedClaudeStatus,
-        geminiStatus: installedGeminiStatus,
+        antigravityStatus: installedAntigravityStatus,
         codexStatus: installedCodexStatus,
         openCodeStatus: installedOpenCodeStatus,
       });
