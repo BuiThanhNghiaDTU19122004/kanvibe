@@ -1,3 +1,4 @@
+import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AI_PROVIDER_CONFIG_DIR_SPECS } from "@/lib/aiUsage/providerConfigDir";
 import {
@@ -6,6 +7,8 @@ import {
   readProviderAuthStatus,
   refreshCredentialsThroughCli,
 } from "@/lib/aiUsage/providerCli";
+
+vi.mock("os", async (original) => { const actual = await original<typeof import("os")>(); return { ...actual, homedir: () => process.env.HOME || actual.homedir() }; });
 
 const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
 
@@ -33,11 +36,11 @@ afterEach(() => {
 describe("createProviderCliEnvironment", () => {
   it("계정 위치를 알리는 변수 하나만 얹는다", () => {
     const environment = createProviderCliEnvironment(
-      AI_PROVIDER_CONFIG_DIR_SPECS.gemini,
-      "/home/tester/.gemini-work",
+      AI_PROVIDER_CONFIG_DIR_SPECS.antigravity,
+      "/home/tester/.antigravity-work",
     );
 
-    expect(environment.GEMINI_CLI_HOME).toBe("/home/tester/.gemini-work");
+    expect(environment.ANTIGRAVITY_CLI_HOME).toBeUndefined();
     expect(environment.CLAUDE_CONFIG_DIR).toBeUndefined();
     expect(environment.CODEX_HOME).toBeUndefined();
   });
@@ -63,10 +66,11 @@ describe("createProviderCliEnvironment", () => {
   // 기본 루트를 지정하면 Claude Code가 설정 파일을 config dir 안에 새로 만들어 계정 신원이 갈린다
   it("기본 루트에는 계정 위치 변수를 얹지 않는다", () => {
     vi.stubEnv("HOME", "/home/tester");
+    vi.stubEnv("USERPROFILE", "/home/tester");
 
     const environment = createProviderCliEnvironment(
       AI_PROVIDER_CONFIG_DIR_SPECS.claude,
-      "/home/tester/.claude",
+      path.join("/home/tester", ".claude"),
     );
 
     expect(environment.CLAUDE_CONFIG_DIR).toBeUndefined();
@@ -74,11 +78,12 @@ describe("createProviderCliEnvironment", () => {
 
   it("셸에서 물려받은 계정 위치 변수도 기본 루트 호출에서는 지운다", () => {
     vi.stubEnv("HOME", "/home/tester");
+    vi.stubEnv("USERPROFILE", "/home/tester");
     vi.stubEnv("CLAUDE_CONFIG_DIR", "/home/tester/.claude-work");
 
     const environment = createProviderCliEnvironment(
       AI_PROVIDER_CONFIG_DIR_SPECS.claude,
-      "/home/tester/.claude",
+      path.join("/home/tester", ".claude"),
     );
 
     expect(environment.CLAUDE_CONFIG_DIR).toBeUndefined();
@@ -86,18 +91,19 @@ describe("createProviderCliEnvironment", () => {
 
   it("홈 자체가 기본 루트인 provider도 변수를 얹지 않는다", () => {
     vi.stubEnv("HOME", "/home/tester");
+    vi.stubEnv("USERPROFILE", "/home/tester");
 
     const environment = createProviderCliEnvironment(
-      AI_PROVIDER_CONFIG_DIR_SPECS.gemini,
+      AI_PROVIDER_CONFIG_DIR_SPECS.antigravity,
       "/home/tester",
     );
 
-    expect(environment.GEMINI_CLI_HOME).toBeUndefined();
+    expect(environment.ANTIGRAVITY_CLI_HOME).toBeUndefined();
   });
 });
 
 describe("getProviderLoginCommand", () => {
-  it("launches the native Antigravity CLI without legacy Gemini flags", () => {
+  it("launches the native Antigravity CLI without legacy Antigravity flags", () => {
     expect(getProviderLoginCommand("antigravity")).toEqual({ command: "agy", args: [] });
   });
   it("Claude는 구독 로그인을 곧바로 고르게 해 선택 화면을 건너뛴다", () => {
@@ -107,8 +113,8 @@ describe("getProviderLoginCommand", () => {
     });
   });
 
-  it("Gemini는 로그인 전용 하위 명령이 없어 CLI를 그대로 띄운다", () => {
-    expect(getProviderLoginCommand("gemini")).toEqual({ command: "gemini", args: [] });
+  it("Antigravity는 로그인 전용 하위 명령이 없어 CLI를 그대로 띄운다", () => {
+    expect(getProviderLoginCommand("antigravity")).toEqual({ command: "agy", args: [] });
   });
 });
 
@@ -154,8 +160,9 @@ describe("readProviderAuthStatus", () => {
   });
 
   it("물을 수 없는 provider는 CLI를 부르지 않고 모른다고 답한다", async () => {
-    expect(await readProviderAuthStatus("gemini", "/home/tester/.gemini-work")).toBeNull();
-    expect(mockExecFile).not.toHaveBeenCalled();
+    stubCliOutput("{}");
+    expect(await readProviderAuthStatus("antigravity", "antigravity-default")).toBeNull();
+    expect(mockExecFile).toHaveBeenCalledWith("agy", ["-p", "/usage", "--output-format", "json"], expect.any(Object), expect.any(Function));
   });
 
   it("CLI를 실행하지 못하면 로그아웃이 아니라 모른다로 둔다", async () => {
