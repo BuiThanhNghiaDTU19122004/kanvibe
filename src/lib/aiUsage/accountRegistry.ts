@@ -5,7 +5,7 @@ import {
 } from "@/lib/aiUsage/providerConfigDir";
 import type { AiUsageProvider } from "@/lib/aiUsage/types";
 
-const KNOWN_PROVIDERS = new Set<string>(["claude", "codex", "gemini"]);
+const KNOWN_PROVIDERS = new Set<string>(["claude", "codex", "antigravity"]);
 
 /**
  * 사용자가 KanVibe에서 만든 계정 하나.
