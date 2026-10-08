@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { execFileSync, spawn } = require("node:child_process");
+const { execPnpmSync, spawnPnpm } = require("./package-runtime.cjs");
 const http = require("node:http");
 const net = require("node:net");
 
@@ -38,7 +38,7 @@ function ensureSupportedNodeVersion() {
 
 function installProjectDependencies() {
   console.warn("[kanvibe] Installing project dependencies because better-sqlite3 is missing...");
-  execFileSync("pnpm", ["install"], {
+  execPnpmSync(["install"], {
     stdio: "inherit",
     env: process.env,
   });
@@ -127,7 +127,7 @@ async function resolveDevServerPort(preferredPort = PREFERRED_DEV_SERVER_PORT) {
 
 function spawnViteServer(port) {
   /** --strictPort가 없으면 위에서 잡은 포트를 vite가 다시 갈아치울 수 있다 */
-  return spawn("pnpm", ["exec", "vite", "--host", DEV_SERVER_HOST, "--port", String(port), "--strictPort"], {
+  return spawnPnpm(["exec", "vite", "--host", DEV_SERVER_HOST, "--port", String(port), "--strictPort"], {
     stdio: "inherit",
     env: {
       ...process.env,
@@ -137,7 +137,7 @@ function spawnViteServer(port) {
 }
 
 function spawnElectron(devServerUrl) {
-  return spawn("pnpm", ["exec", "electron", "--no-sandbox", "."], {
+  return spawnPnpm(["exec", "electron", "--no-sandbox", "."], {
     stdio: "inherit",
     env: {
       ...process.env,
