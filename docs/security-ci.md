@@ -9,11 +9,11 @@ The workflows in `.github/workflows/ci.yml` and `.github/workflows/security.yml`
 | ESLint, TypeScript, Vitest, build | Catch source errors before merging. |
 | Windows package and Electron smoke test | Verify that the shipped Windows app starts, loads the renderer, calls IPC, and opens SQLite. |
 | Gitleaks | Scan Git history for committed credentials. GitHub secret scanning and push protection provide another layer on this public fork. |
-| Semgrep Community Edition | Scan source patterns without a service token. |
+| Semgrep Community Edition | Scan source patterns without a service token. Pull requests fail on new findings; branch and scheduled scans report the existing baseline. |
 | CodeQL security-extended | Analyze JavaScript and TypeScript data flows; findings appear in GitHub code scanning. |
 | Dependency review | Reject pull requests that introduce a high or critical dependency advisory. |
 | pnpm audit | Report high and critical advisories in both app and documentation lockfiles, including existing ones. |
-| Dependabot | Propose weekly npm and GitHub Actions updates. |
+| Dependabot | Propose weekly npm and GitHub Actions updates and security fixes. Dependency Graph and alerts are enabled on the fork. |
 
 All jobs use the minimum GitHub token permissions they need. The checks do not need a repository secret. Never add credentials or `.env` files to the repository; place any future integration token in GitHub Actions secrets.
 
