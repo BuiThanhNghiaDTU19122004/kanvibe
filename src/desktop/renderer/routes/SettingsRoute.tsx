@@ -1,125 +1,101 @@
 import { useEffect, useState } from "react";
+import { Navigate, useParams } from "react-router-dom";
+import { useTranslations } from "next-intl";
 import ProjectSettings from "@/components/ProjectSettings";
+import LoadError from "@/components/LoadError";
 import {
-  getBackgroundSyncSettings,
-  getDefaultSessionType,
-  getNotificationSettings,
-  getSidebarDefaultCollapsed,
-  getThemePreference,
-  getVimModeEnabled,
+  getBackgroundSyncSettings, getDefaultSessionType, getNotificationSettings,
+  getSidebarDefaultCollapsed, getThemePreference, getVimModeEnabled,
   type ThemePreference,
 } from "@/desktop/renderer/actions/appSettings";
-import { getAllProjects, getAvailableHosts } from "@/desktop/renderer/actions/project";
-import { useRouter } from "@/desktop/renderer/navigation";
+import { SessionType } from "@/entities/KanbanTask";
+import { SETTINGS_SECTIONS, SETTINGS_SECTION_LABELS, type SettingsSection } from "@/desktop/shared/settingsSections";
 import { useRefreshSignal } from "@/desktop/renderer/utils/refresh";
 import { INITIAL_DESKTOP_LOAD_TIMEOUT_MS, logDesktopInitialLoadTimeout } from "@/desktop/renderer/utils/loadingTimeout";
-import { SessionType } from "@/entities/KanbanTask";
 
 interface SettingsData {
-  projects: Awaited<ReturnType<typeof getAllProjects>>;
-  sshHosts: string[];
+  section: SettingsSection;
   sidebarDefaultCollapsed: boolean;
   notificationSettings: Awaited<ReturnType<typeof getNotificationSettings>>;
-  defaultSessionType: Awaited<ReturnType<typeof getDefaultSessionType>>;
-  vimModeEnabled: Awaited<ReturnType<typeof getVimModeEnabled>>;
+  defaultSessionType: SessionType;
+  vimModeEnabled: boolean;
   themePreference: ThemePreference;
   backgroundSyncSettings: Awaited<ReturnType<typeof getBackgroundSyncSettings>>;
 }
 
-function createEmptySettingsData(): SettingsData {
-  return {
-    projects: [],
-    sshHosts: [],
-    sidebarDefaultCollapsed: false,
-    notificationSettings: { isEnabled: true, enabledStatuses: ["progress", "pending", "review"] },
-    defaultSessionType: SessionType.TMUX,
-    vimModeEnabled: true,
-    themePreference: "system",
-    backgroundSyncSettings: { isEnabled: true, intervalMs: 10 * 60_000 },
+// Only read the setting used by this page. Projects and SSH hosts are unrelated.
+async function loadSection(section: SettingsSection): Promise<SettingsData> {
+  const data: SettingsData = {
+    section, sidebarDefaultCollapsed: false, defaultSessionType: SessionType.TERMINAL,
+    vimModeEnabled: true, themePreference: "system",
+    notificationSettings: { isEnabled: false, enabledStatuses: [] },
+    backgroundSyncSettings: { isEnabled: false, intervalMs: 600_000 },
   };
+  switch (section) {
+    case "appearance": data.themePreference = await getThemePreference(); break;
+    case "detail": data.sidebarDefaultCollapsed = await getSidebarDefaultCollapsed(); break;
+    case "creation": data.defaultSessionType = await getDefaultSessionType(); break;
+    case "notifications": data.notificationSettings = await getNotificationSettings(); break;
+    case "background-sync": data.backgroundSyncSettings = await getBackgroundSyncSettings(); break;
+    case "keyboard": data.vimModeEnabled = await getVimModeEnabled(); break;
+  }
+  return data;
 }
 
 export default function SettingsRoute() {
-  const router = useRouter();
+  const { section: sectionParam = "appearance" } = useParams();
+  const section = SETTINGS_SECTIONS.find((value) => value === sectionParam);
   const refreshSignal = useRefreshSignal(["all", "settings"]);
   const [data, setData] = useState<SettingsData | null>(null);
+  const t = useTranslations("common");
+  const ts = useTranslations("settings");
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const retry = () => { setLoadFailed(false); setRetryKey((key) => key + 1); };
 
   useEffect(() => {
-    document.title = "Settings";
-  }, []);
+    if (section) document.title = ts(SETTINGS_SECTION_LABELS[section]);
+  }, [section, ts]);
 
   useEffect(() => {
+    if (!section) return;
     let cancelled = false;
+    setLoadFailed(false);
     const loadingTimeout = window.setTimeout(() => {
       if (!cancelled) {
-        logDesktopInitialLoadTimeout("settings");
-        setData((currentData) => currentData ?? createEmptySettingsData());
+        logDesktopInitialLoadTimeout(`settings/${section}`);
+        setLoadFailed(true);
       }
     }, INITIAL_DESKTOP_LOAD_TIMEOUT_MS);
-
-    Promise.all([
-      getAllProjects(),
-      getAvailableHosts(),
-      getSidebarDefaultCollapsed(),
-      getNotificationSettings(),
-      getDefaultSessionType(),
-      getVimModeEnabled(),
-      getThemePreference(),
-      getBackgroundSyncSettings(),
-    ]).then(([projects, sshHosts, sidebarDefaultCollapsed, notificationSettings, defaultSessionType, vimModeEnabled, themePreference, backgroundSyncSettings]) => {
+    void loadSection(section).then((nextData) => {
       window.clearTimeout(loadingTimeout);
-      if (!cancelled) {
-        setData({
-          projects,
-          sshHosts,
-          sidebarDefaultCollapsed,
-          notificationSettings,
-          defaultSessionType,
-          vimModeEnabled,
-          themePreference,
-          backgroundSyncSettings,
-        });
-      }
+      if (!cancelled) { setData(nextData); setLoadFailed(false); }
     }).catch((error) => {
       window.clearTimeout(loadingTimeout);
-      console.error("Failed to load settings route data:", error);
-      if (!cancelled) {
-        setData((currentData) => currentData ?? createEmptySettingsData());
-      }
+      console.error("Failed to load settings page:", error);
+      if (!cancelled) setLoadFailed(true);
     });
+    return () => { cancelled = true; window.clearTimeout(loadingTimeout); };
+  }, [section, refreshSignal, retryKey]);
 
-    return () => {
-      cancelled = true;
-      window.clearTimeout(loadingTimeout);
-    };
-  }, [refreshSignal]);
-
-  if (!data) {
-    return <div className="min-h-screen flex items-center justify-center bg-bg-page text-text-muted">Loading...</div>;
+  if (!section) return <Navigate to="../appearance" replace />;
+  if (!data || data.section !== section) {
+    return loadFailed ? <LoadError onRetry={retry} /> : <div className="flex min-h-48 items-center justify-center text-text-muted">{t("loading")}</div>;
   }
-
   return (
-    <ProjectSettings
-      isOpen
-      variant="page"
-      onClose={() => router.back()}
-      projects={data.projects}
-      sshHosts={data.sshHosts}
-      sidebarDefaultCollapsed={data.sidebarDefaultCollapsed}
-      defaultSessionType={data.defaultSessionType}
-      vimModeEnabled={data.vimModeEnabled}
-      themePreference={data.themePreference}
-      onDefaultSessionTypeChange={(sessionType) => {
-        setData((currentData) => currentData ? { ...currentData, defaultSessionType: sessionType } : currentData);
-      }}
-      onThemePreferenceChange={(themePreference) => {
-        setData((currentData) => currentData ? { ...currentData, themePreference } : currentData);
-      }}
-      onVimModeEnabledChange={(vimModeEnabled) => {
-        setData((currentData) => currentData ? { ...currentData, vimModeEnabled } : currentData);
-      }}
-      notificationSettings={data.notificationSettings}
-      backgroundSyncSettings={data.backgroundSyncSettings}
-    />
+    <>
+      {loadFailed && <LoadError inline onRetry={retry} />}
+      <ProjectSettings key={section} isOpen variant="page" section={section}
+        sidebarDefaultCollapsed={data.sidebarDefaultCollapsed}
+        defaultSessionType={data.defaultSessionType}
+        vimModeEnabled={data.vimModeEnabled}
+        themePreference={data.themePreference}
+        onDefaultSessionTypeChange={(defaultSessionType) => setData((current) => current ? { ...current, defaultSessionType } : current)}
+        onThemePreferenceChange={(themePreference) => setData((current) => current ? { ...current, themePreference } : current)}
+        onVimModeEnabledChange={(vimModeEnabled) => setData((current) => current ? { ...current, vimModeEnabled } : current)}
+        notificationSettings={data.notificationSettings}
+        backgroundSyncSettings={data.backgroundSyncSettings}
+      />
+    </>
   );
 }

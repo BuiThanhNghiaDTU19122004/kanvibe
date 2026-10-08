@@ -41,4 +41,21 @@ describe("globals.css theme tokens", () => {
     expect(css).toContain("border-color: var(--color-border-brand) !important;");
     expect(css).toContain("box-shadow: var(--shadow-kanban-task-focus);");
   });
+
+  it("defines correct background and brand tokens for extended themes", () => {
+    // Dracula
+    expect(readThemeVar(':root\\[data-theme="dracula"\\]', "--color-bg-page")).toBe("#21222c");
+    expect(readThemeVar(':root\\[data-theme="dracula"\\]', "--color-brand-primary")).toBe("#bd93f9");
+    expect(readThemeVar(':root\\[data-theme="dracula"\\]', "--color-status-done")).toBe("#50fa7b");
+
+    // One Dark
+    expect(readThemeVar(':root\\[data-theme="one-dark"\\]', "--color-bg-page")).toBe("#1e2227");
+    expect(readThemeVar(':root\\[data-theme="one-dark"\\]', "--color-brand-primary")).toBe("#61afef");
+    expect(readThemeVar(':root\\[data-theme="one-dark"\\]', "--color-status-done")).toBe("#98c379");
+
+    // Catppuccin Mocha
+    expect(readThemeVar(':root\\[data-theme="catppuccin-mocha"\\]', "--color-bg-page")).toBe("#181825");
+    expect(readThemeVar(':root\\[data-theme="catppuccin-mocha"\\]', "--color-brand-primary")).toBe("#cba6f7");
+    expect(readThemeVar(':root\\[data-theme="catppuccin-mocha"\\]', "--color-status-done")).toBe("#a6e3a1");
+  });
 });

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/desktop/renderer/navigation";
 import { useBoardCommands } from "@/desktop/renderer/components/BoardCommandProvider";
 import {
   captureShortcutFromEvent,
@@ -168,12 +167,9 @@ export default function ShortcutSettingsRoute() {
   }, [applyShortcut, boardCommands, describeShortcutConflict, recordingCommandId, shortcutPlatform, t]);
 
   return (
-    <div data-shortcut-capture="true" className="min-h-screen bg-bg-page px-6 py-8">
-      <div className="mx-auto w-full max-w-3xl">
-        <Link href="/settings" className="mb-8 inline-flex items-center gap-3 text-xs font-medium text-text-muted hover:text-text-primary">
-          <span aria-hidden="true">←</span>
-          {t("title")}
-        </Link>
+    <div data-shortcut-capture="true" className="w-full">
+      <div className="w-full">
+
 
         <header className="mb-6 flex items-start justify-between gap-4">
           <div>

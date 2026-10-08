@@ -4,10 +4,17 @@ import type { ShortcutBindings } from "@/desktop/shared/shortcutBindings";
 import { invokeDesktop } from "@/desktop/renderer/ipc";
 import { triggerDesktopRefresh } from "@/desktop/renderer/utils/refresh";
 
-export type ThemePreference = "system" | "light" | "dark";
+export type ThemePreference = "system" | "light" | "dark" | "dracula" | "one-dark" | "catppuccin-mocha";
 
 const THEME_PREFERENCE_KEY = "theme_preference";
-const THEME_PREFERENCES = new Set<ThemePreference>(["system", "light", "dark"]);
+const THEME_PREFERENCES = new Set<ThemePreference>([
+  "system",
+  "light",
+  "dark",
+  "dracula",
+  "one-dark",
+  "catppuccin-mocha",
+]);
 
 async function invokeAndRefresh<T>(method: string, ...args: unknown[]): Promise<T> {
   const result = await invokeDesktop<T>("appSettings", method, ...args);

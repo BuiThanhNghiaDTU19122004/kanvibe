@@ -32,6 +32,13 @@ vi.mock("@/lib/hostFileAccess", async (importOriginal) => {
 });
 
 describe("diffService remote task support", () => {
+  it("propagates failed diff reads to the review screen instead of reporting zero changes", async () => {
+    mocks.taskRepo.findOne.mockResolvedValue({ worktreePath: "D:/missing", branchName: "feat/task", baseBranch: "main", sshHost: null });
+    mocks.execGit.mockRejectedValue(new Error("Git failed"));
+    const { getGitDiffFiles } = await import("@/desktop/main/services/diffService");
+    await expect(getGitDiffFiles("task-1", true)).rejects.toThrow("Could not read changes");
+    expect(mocks.taskDiffStatsRepo.save).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();

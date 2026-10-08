@@ -240,7 +240,7 @@ async function getClaudeProjectsDirectory(context: AiSessionReaderContext): Prom
 
 /** Claude Code는 프로젝트 디렉토리 이름을 생성할 때 경로 구분자(/)와 언더스코어(_) 모두 하이픈(-)으로 치환한다 */
 function toClaudeProjectDirName(targetPath: string): string {
-  return path.resolve(targetPath).replaceAll(path.sep, "-").replaceAll("_", "-");
+  return path.resolve(targetPath).replaceAll(path.sep, "-").replaceAll("_", "-").replaceAll(":", "-");
 }
 
 function consumeClaudeListEvent(

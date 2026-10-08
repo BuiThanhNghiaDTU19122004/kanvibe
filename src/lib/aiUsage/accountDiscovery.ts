@@ -1,3 +1,4 @@
+import { ANTIGRAVITY_ACCOUNT } from "./readAntigravityUsage";
 import { readFile, readdir } from "fs/promises";
 import { homedir } from "os";
 import path from "path";
@@ -122,11 +123,8 @@ async function readCodexAccountIdentity(configDir: string): Promise<ProviderAcco
   };
 }
 
-/**
- * Gemini CLI는 계정 이메일을 남기지 않는 판이 있고, 자격증명을 OS 키체인에 넣는 판도 있다.
- * 어느 쪽이든 계정을 가를 안정적인 로컬 값이 경로뿐이라 계정 이름을 라벨로 쓴다.
- */
-async function readGeminiAccountIdentity(): Promise<ProviderAccountIdentity> {
+// Account identity remains owned by agy and its OS keyring.
+async function readAntigravityAccountIdentity(): Promise<ProviderAccountIdentity> {
   return { accountId: null, label: null };
 }
 
@@ -136,7 +134,7 @@ const ACCOUNT_IDENTITY_READERS: Record<
 > = {
   claude: readClaudeAccountIdentity,
   codex: readCodexAccountIdentity,
-  gemini: readGeminiAccountIdentity,
+  antigravity: readAntigravityAccountIdentity,
 };
 
 /** provider마다 자격증명 파일에서 로그인을 증명하는 자리가 다르다 */
@@ -152,7 +150,7 @@ const STORED_ACCESS_TOKEN_READERS: Record<
     const tokens = credentials.tokens as Record<string, unknown> | undefined;
     return firstNonEmptyString([tokens?.access_token]);
   },
-  gemini: (credentials) => firstNonEmptyString([credentials.access_token]),
+  antigravity: () => null,
 };
 
 /** 이 디렉터리에 로그인을 증명하는 자격증명이 들어 있는지 */
@@ -253,6 +251,7 @@ export async function discoverProviderAccounts(
   provider: AiUsageProvider,
   registrations: AiAccountRegistration[] = [],
 ): Promise<AiUsageAccount[]> {
+  if (provider === "antigravity") return [{ ...ANTIGRAVITY_ACCOUNT }];
   const spec = AI_PROVIDER_CONFIG_DIR_SPECS[provider];
   const providerRegistrations = registrations.filter(
     (registration) => registration.provider === provider,
@@ -261,24 +260,21 @@ export async function discoverProviderAccounts(
     providerRegistrations.map((registration) => registration.accountRoot),
   );
   const candidateRoots = await collectAccountRootCandidates(spec, providerRegistrations);
-  const accounts: AiUsageAccount[] = [];
-
-  for (const accountRoot of candidateRoots) {
+  // Read candidate files concurrently while preserving discovery priority for deduplication.
+  const candidates = await Promise.all(candidateRoots.map(async (accountRoot): Promise<AiUsageAccount | null> => {
     const configDir = toAccountConfigDir(spec, accountRoot);
     const isRegistered = registeredRoots.has(accountRoot);
-    if (!isRegistered && !(await hasStoredCredentials(spec, configDir))) {
-      continue;
-    }
-
+    if (!isRegistered && !(await hasStoredCredentials(spec, configDir))) return null;
     const identity = await ACCOUNT_IDENTITY_READERS[provider](configDir);
-    accounts.push({
+    return {
       provider,
       accountId: identity.accountId ?? accountRoot,
       label: toAccountLabel(spec, identity, accountRoot),
       configDir,
       accountRoot,
-    });
-  }
+    };
+  }));
+  const accounts = candidates.filter((account): account is AiUsageAccount => account !== null);
 
   // 기본 계정을 파일로 찾았으면 Keychain 승인 프롬프트를 띄울 이유가 없다.
   // 다른 계정을 등록해 뒀다는 사실은 기본 계정이 Keychain에 있는지와 무관하므로 개수로 판단하지 않는다

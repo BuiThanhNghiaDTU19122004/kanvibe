@@ -10,6 +10,9 @@ import {
 import { useTranslations } from "next-intl";
 import { useParams } from "react-router-dom";
 import ConnectTerminalForm from "@/components/ConnectTerminalForm";
+import LoadError from "@/components/LoadError";
+import TaskWorkspace from "@/components/TaskWorkspace";
+import LanguageSelector from "@/components/LanguageSelector";
 import CreateTaskModal from "@/components/CreateTaskModal";
 import DeleteTaskButton from "@/components/DeleteTaskButton";
 import DoneStatusButton from "@/components/DoneStatusButton";
@@ -26,7 +29,7 @@ import {
   getTaskAiSessions,
   getTaskAiSessionDetail,
   getTaskCodexHooksStatus,
-  getTaskGeminiHooksStatus,
+  getTaskAntigravityHooksStatus,
   getTaskHooksStatus,
   getTaskOpenCodeHooksStatus,
   getAllProjects,
@@ -44,6 +47,9 @@ import TerminalLoader from "@/desktop/renderer/components/TerminalLoader";
 import TerminalTabBar from "@/desktop/renderer/components/TerminalTabBar";
 import { useMarkTaskNotificationsReadWhenFocused } from "@/desktop/renderer/hooks/useMarkTaskNotificationsReadWhenFocused";
 import { useTaskAgentCallGraph, useTaskLiveAiSessions } from "@/desktop/renderer/hooks/useLiveAiSessions";
+import { useAgentMonitor } from "@/desktop/renderer/hooks/useLiveAiSessions";
+import { hasAgentAutoStart, consumeAgentAutoStart } from "@/desktop/renderer/utils/agentAutoStart";
+import type { AgentLaunchError } from "@/desktop/shared/agentRuntime";
 import { useTaskDiffFiles } from "@/desktop/renderer/hooks/useTaskDiffStats";
 import { useTerminalTabs } from "@/desktop/renderer/hooks/useTerminalTabs";
 import type { TerminalTabShortcutCommand } from "@/desktop/shared/terminalTabs";
@@ -91,12 +97,12 @@ const INLINE_CHAT_SESSION_LIMIT = 20;
 
 const AGENT_TAG_STYLES: Record<string, string> = {
   claude: "bg-tag-claude-bg text-tag-claude-text",
-  gemini: "bg-tag-gemini-bg text-tag-gemini-text",
+  antigravity: "bg-tag-antigravity-bg text-tag-antigravity-text",
   codex: "bg-tag-codex-bg text-tag-codex-text",
 };
 
 type DetailPanel = "overview" | "status" | "liveSessions" | "usage";
-type MainView = "terminal" | "chat";
+type MainView = "terminal" | "chat" | "activity" | "results";
 type TaskDetailDockItem = {
   id: TaskDetailDockItemId;
   label: string;
@@ -161,7 +167,7 @@ interface TaskDetailState {
   task: NonNullable<Awaited<ReturnType<typeof getTaskById>>>;
   baseBranchTaskId: string | null;
   claudeHooksStatus: Awaited<ReturnType<typeof getTaskHooksStatus>>;
-  geminiHooksStatus: Awaited<ReturnType<typeof getTaskGeminiHooksStatus>>;
+  antigravityHooksStatus: Awaited<ReturnType<typeof getTaskAntigravityHooksStatus>>;
   codexHooksStatus: Awaited<ReturnType<typeof getTaskCodexHooksStatus>>;
   openCodeHooksStatus: Awaited<ReturnType<typeof getTaskOpenCodeHooksStatus>>;
   projects: Awaited<ReturnType<typeof getAllProjects>>;
@@ -182,7 +188,7 @@ interface NormalizedTaskDetailRouteCache {
 const DEFAULT_DETAIL_STATE: Omit<TaskDetailState, "task"> = {
   baseBranchTaskId: null,
   claudeHooksStatus: null,
-  geminiHooksStatus: null,
+  antigravityHooksStatus: null,
   codexHooksStatus: null,
   openCodeHooksStatus: null,
   projects: [],
@@ -233,24 +239,24 @@ function normalizeCachedTaskDetailRouteCache(cachedRoute: TaskDetailRouteCache |
 
 const AI_SESSION_PROVIDER_STYLES: Record<AggregatedAiSession["provider"], string> = {
   claude: "border-tag-claude-text/30 bg-tag-claude-bg text-tag-claude-text",
-  gemini: "border-tag-gemini-text/30 bg-tag-gemini-bg text-tag-gemini-text",
+  antigravity: "border-tag-antigravity-text/30 bg-tag-antigravity-bg text-tag-antigravity-text",
   codex: "border-tag-codex-text/30 bg-tag-codex-bg text-tag-codex-text",
   opencode: "border-tag-neutral-text/30 bg-tag-neutral-bg text-tag-neutral-text",
 };
 
 const AI_SESSION_PROVIDER_ICON_STYLES: Record<AggregatedAiSession["provider"], string> = {
   claude: "border-tag-claude-text/40 bg-tag-claude-bg text-tag-claude-text",
-  gemini: "border-tag-gemini-text/40 bg-tag-gemini-bg text-tag-gemini-text",
+  antigravity: "border-tag-antigravity-text/40 bg-tag-antigravity-bg text-tag-antigravity-text",
   codex: "border-tag-codex-text/40 bg-tag-codex-bg text-tag-codex-text",
   opencode: "border-tag-neutral-text/40 bg-tag-neutral-bg text-tag-neutral-text",
 };
 
-const AI_SESSION_PROVIDER_ORDER: AggregatedAiSession["provider"][] = ["claude", "opencode", "gemini", "codex"];
+const AI_SESSION_PROVIDER_ORDER: AggregatedAiSession["provider"][] = ["claude", "opencode", "antigravity", "codex"];
 
 const AI_SESSION_PROVIDER_META: Record<AggregatedAiSession["provider"], { label: string }> = {
   claude: { label: "Claude" },
   opencode: { label: "OpenCode" },
-  gemini: { label: "Gemini" },
+  antigravity: { label: "Antigravity" },
   codex: { label: "Codex" },
 };
 
@@ -303,7 +309,7 @@ function InlineAiChatView({ taskId }: { taskId: string }) {
       claude: 0,
       codex: 0,
       opencode: 0,
-      gemini: 0,
+      antigravity: 0,
     };
     for (const session of history?.sessions ?? []) {
       counts[session.provider] += 1;
@@ -840,6 +846,7 @@ export default function TaskDetailRoute() {
   const hasShortcutBlocker = useHasBoardShortcutBlocker();
   const t = useTranslations("taskDetail");
   const tc = useTranslations("common");
+  const tm = useTranslations("mvp");
   const refreshSignal = useRefreshSignal(["all", "task-detail"]);
   const cachedRoute = useMemo(
     () => (id ? normalizeCachedTaskDetailRouteCache(readRouteCache<TaskDetailRouteCache>(getTaskDetailRouteCacheKey(id))) : null),
@@ -847,6 +854,9 @@ export default function TaskDetailRoute() {
   );
   const cachedState = cachedRoute?.state ?? null;
   const [state, setState] = useState<TaskDetailState | null | undefined>(cachedState ?? undefined);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const retryLoad = () => { setLoadFailed(false); setRetryKey((key) => key + 1); };
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [createTaskDefaults, setCreateTaskDefaults] = useState<BranchTodoDefaults | null>(null);
   const currentTaskRef = useRef<TaskDetailState["task"] | null>(cachedState?.task ?? null);
@@ -858,7 +868,20 @@ export default function TaskDetailRoute() {
   const [defaultPanelDismissed, setDefaultPanelDismissed] = useState(cachedRoute?.defaultPanelDismissed ?? false);
   const [resolvedSidebarDefaultCollapsed, setResolvedSidebarDefaultCollapsed] = useState<boolean | null>(null);
   const [activePanel, setActivePanel] = useState<DetailPanel | null>(null);
-  const [mainView, setMainView] = useState<MainView>("terminal");
+  const [mainView, setMainView] = useState<MainView>(() => window.location.hash.includes("view=results") ? "results" : window.location.hash.includes("view=terminal") ? "terminal" : "activity");
+  const [readyTabs, setReadyTabs] = useState<Record<string, boolean>>({});
+  const [launchPending, setLaunchPending] = useState(false);
+  const [launchError, setLaunchError] = useState<AgentLaunchError | null>(null);
+  const launchInFlight = useRef(false);
+  const agentMonitor = useAgentMonitor(!!state);
+  const taskRuntimes = agentMonitor.value.runtimes.filter((runtime) => runtime.taskId === id);
+  const agentIsRunning = taskRuntimes.some((runtime) => runtime.state === "starting" || runtime.state === "running");
+  const activeTerminalTabRef = useRef<string | null>(null);
+  const handleTerminalStatus = useCallback((tabId: string | null, status: "ready" | "error") => {
+    setReadyTabs((current) => ({ ...current, [tabId ?? "default"]: status === "ready" }));
+    if (status === "error" && (tabId === null || tabId === activeTerminalTabRef.current)) setLaunchError("terminal-not-ready");
+    if (status === "ready" && (tabId === null || tabId === activeTerminalTabRef.current)) setLaunchError((current) => current === "terminal-not-ready" ? null : current);
+  }, []);
   const notificationCenterRef = useRef<NotificationCenterButtonHandle>(null);
   const currentTaskIdRef = useRef(id);
   const dockItemsRef = useRef<TaskDetailDockItem[]>([]);
@@ -868,16 +891,18 @@ export default function TaskDetailRoute() {
     taskId: id ?? "",
     sessionType: (state?.task.sessionType as SessionType | undefined) ?? null,
     isRemote: !!state?.task.sshHost,
-    isVisible: hasTerminal && mainView === "terminal",
+    isVisible: hasTerminal && (state?.task.sessionType === SessionType.TERMINAL || mainView === "terminal"),
   });
   useMarkTaskNotificationsReadWhenFocused(state?.task.id ?? null);
   const shortcutPlatform = getCurrentShortcutPlatform();
+  activeTerminalTabRef.current = terminalTabs.activeTab?.id ?? null;
   const shortcutBindings = useShortcutBindings();
   const statusPanelLabel = resolveTaskDetailDockLabel(t, "status");
   currentTaskRef.current = state?.task ?? null;
   const shouldShowDefaultOverviewPanel = !!state
     && state !== null
     && resolvedSidebarDefaultCollapsed === false
+    && mainView === "terminal"
     && !defaultPanelDismissed;
   const visiblePanel = activePanel ?? (shouldShowDefaultOverviewPanel ? "overview" : null);
 
@@ -998,8 +1023,8 @@ export default function TaskDetailRoute() {
         renderIcon: () => (
           <HugeiconsIcon
             icon={InformationCircleIcon}
-            size={17}
-            strokeWidth={1.6}
+            size={19}
+            strokeWidth={1.8}
             aria-hidden="true"
           />
         ),
@@ -1019,8 +1044,8 @@ export default function TaskDetailRoute() {
         renderIcon: () => (
           <HugeiconsIcon
             icon={Chatting01Icon}
-            size={17}
-            strokeWidth={1.6}
+            size={19}
+            strokeWidth={1.8}
             aria-hidden="true"
           />
         ),
@@ -1033,8 +1058,8 @@ export default function TaskDetailRoute() {
         renderIcon: () => (
           <HugeiconsIcon
             icon={Activity03Icon}
-            size={17}
-            strokeWidth={1.6}
+            size={19}
+            strokeWidth={1.8}
             aria-hidden="true"
           />
         ),
@@ -1061,8 +1086,8 @@ export default function TaskDetailRoute() {
       renderIcon: () => (
         <HugeiconsIcon
           icon={SourceCodeIcon}
-          size={17}
-          strokeWidth={1.6}
+          size={19}
+          strokeWidth={1.8}
           aria-hidden="true"
         />
       ),
@@ -1113,6 +1138,11 @@ export default function TaskDetailRoute() {
     },
   }), [boardCommands]);
 
+  const movePaletteTaskToStatus = useCallback(async (newStatus: TaskStatus) => {
+    const updatedTask = await updateTaskStatus(id, newStatus);
+    if (updatedTask) setState((current) => current ? { ...current, task: { ...current.task, ...updatedTask } } : current);
+  }, [id]);
+
   useEffect(() => {
     if (!state?.task) {
       return;
@@ -1123,7 +1153,7 @@ export default function TaskDetailRoute() {
       currentStatus: state.task.status,
       moveTaskToStatus: movePaletteTaskToStatus,
     });
-  }, [boardCommands, id, state?.task?.status, movePaletteTaskToStatus]);
+  }, [boardCommands, id, state?.task, movePaletteTaskToStatus]);
 
   useEffect(() => {
     commonTranslationsRef.current = tc;
@@ -1350,7 +1380,9 @@ export default function TaskDetailRoute() {
       setDefaultPanelDismissed(nextDefaultPanelDismissed);
       setResolvedSidebarDefaultCollapsed(null);
       setActivePanel(null);
-      setMainView("terminal");
+      setMainView(window.location.hash.includes("view=results") ? "results" : window.location.hash.includes("view=terminal") ? "terminal" : "activity");
+      setReadyTabs({});
+      setLaunchError(null);
     });
 
     return () => {
@@ -1399,7 +1431,7 @@ export default function TaskDetailRoute() {
       loadingTimeout = null;
       if (!cancelled) {
         logDesktopInitialLoadTimeout("task-detail", { taskId: id });
-        setState((current) => current === undefined ? null : current);
+        setLoadFailed(true);
       }
     }, INITIAL_DESKTOP_LOAD_TIMEOUT_MS);
 
@@ -1419,6 +1451,7 @@ export default function TaskDetailRoute() {
           getSidebarDefaultCollapsed().catch(() => DEFAULT_DETAIL_STATE.sidebarDefaultCollapsed),
         ]);
         clearLoadingTimeout();
+        if (!cancelled) setLoadFailed(false);
 
         if (!task) {
           if (!cancelled) {
@@ -1507,16 +1540,16 @@ export default function TaskDetailRoute() {
 
         void (async () => {
           try {
-            const [claudeHooksStatus, geminiHooksStatus, codexHooksStatus, openCodeHooksStatus] = await Promise.all([
+            const [claudeHooksStatus, antigravityHooksStatus, codexHooksStatus, openCodeHooksStatus] = await Promise.all([
               task.projectId ? getTaskHooksStatus(id) : Promise.resolve(null),
-              task.projectId ? getTaskGeminiHooksStatus(id) : Promise.resolve(null),
+              task.projectId ? getTaskAntigravityHooksStatus(id) : Promise.resolve(null),
               task.projectId ? getTaskCodexHooksStatus(id) : Promise.resolve(null),
               task.projectId ? getTaskOpenCodeHooksStatus(id) : Promise.resolve(null),
             ]);
 
             applySupplementalState({
               claudeHooksStatus,
-              geminiHooksStatus,
+              antigravityHooksStatus,
               codexHooksStatus,
               openCodeHooksStatus,
             });
@@ -1529,7 +1562,7 @@ export default function TaskDetailRoute() {
         clearLoadingTimeout();
         console.error("Failed to load task detail:", error);
         if (!cancelled) {
-          setState((current) => current === undefined ? null : current);
+          setLoadFailed(true);
         }
       }
     })();
@@ -1538,7 +1571,7 @@ export default function TaskDetailRoute() {
       cancelled = true;
       clearLoadingTimeout();
     };
-  }, [id, refreshSignal]);
+  }, [id, refreshSignal, retryKey]);
 
   const agentTagStyle = useMemo(
     () => (state?.task.agentType ? AGENT_TAG_STYLES[state.task.agentType] ?? "bg-tag-neutral-bg text-tag-neutral-text" : null),
@@ -1570,8 +1603,37 @@ export default function TaskDetailRoute() {
     closeDetailPanel();
   }, { enabled: visiblePanel !== null });
 
+  const retryAgentMonitor = agentMonitor.retry;
+  const launchAgentInTerminal = useCallback(async () => {
+    if (!state?.task.agentType || launchInFlight.current || agentIsRunning) return;
+    const activeTabId = state.task.sessionType === SessionType.TERMINAL ? terminalTabs.activeTab?.id ?? null : null;
+    if (!readyTabs[activeTabId ?? "default"]) { setLaunchError("terminal-not-ready"); return; }
+    launchInFlight.current = true;
+    setLaunchPending(true);
+    setLaunchError(null);
+    try {
+      const result = await window.kanvibeDesktop.launchAgent(state.task.id, activeTabId);
+      if (!result.ok) setLaunchError(result.code);
+      retryAgentMonitor();
+    } catch { setLaunchError("launch-failed"); }
+    finally { launchInFlight.current = false; setLaunchPending(false); }
+  }, [agentIsRunning, retryAgentMonitor, readyTabs, state?.task, terminalTabs.activeTab?.id]);
+
+  const autoStartTriggeredRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (autoStartTriggeredRef.current === id || !state?.task.agentType || !hasTerminal) {
+      return;
+    }
+    const tabId = state.task.sessionType === SessionType.TERMINAL ? terminalTabs.activeTab?.id ?? null : null;
+    if (hasAgentAutoStart(window.location) && readyTabs[tabId ?? "default"]) {
+      autoStartTriggeredRef.current = id;
+      consumeAgentAutoStart();
+      void launchAgentInTerminal();
+    }
+  }, [hasTerminal, id, launchAgentInTerminal, readyTabs, state?.task.agentType, state?.task.sessionType, terminalTabs.activeTab?.id]);
+
   if (state === undefined) {
-    return <div className="min-h-screen flex items-center justify-center bg-bg-page text-text-muted">Loading...</div>;
+    return loadFailed ? <LoadError onRetry={retryLoad} /> : <div className="min-h-screen flex items-center justify-center bg-bg-page text-text-muted">{tc("loading")}</div>;
   }
 
   if (state === null) {
@@ -1592,21 +1654,6 @@ export default function TaskDetailRoute() {
   }
 
   /** 커맨드 팔레트의 Move가 이 task를 대상으로 호출한다. 폼 액션인 handleStatusChange와 호출 형태가 달라 따로 둔다 */
-  async function movePaletteTaskToStatus(newStatus: TaskStatus) {
-    const updatedTask = await updateTaskStatus(id, newStatus);
-    if (updatedTask) {
-      setState((current) => current
-        ? {
-            ...current,
-            task: {
-              ...current.task,
-              ...updatedTask,
-            },
-          }
-        : current);
-    }
-  }
-
   async function handleStatusChange(formData: FormData) {
     const newStatus = formData.get("status") as TaskStatus;
     const updatedTask = await updateTaskStatus(id, newStatus);
@@ -1789,7 +1836,7 @@ export default function TaskDetailRoute() {
               <HooksStatusCard
                 taskId={state.task.id}
                 initialClaudeStatus={state.claudeHooksStatus}
-                initialGeminiStatus={state.geminiHooksStatus}
+                initialAntigravityStatus={state.antigravityHooksStatus}
                 initialCodexStatus={state.codexHooksStatus}
                 initialOpenCodeStatus={state.openCodeHooksStatus}
                 isRemote={!!state.task.sshHost}
@@ -1798,7 +1845,7 @@ export default function TaskDetailRoute() {
                     ? {
                         ...current,
                         claudeHooksStatus: updates.claudeStatus !== undefined ? updates.claudeStatus : current.claudeHooksStatus,
-                        geminiHooksStatus: updates.geminiStatus !== undefined ? updates.geminiStatus : current.geminiHooksStatus,
+                        antigravityHooksStatus: updates.antigravityStatus !== undefined ? updates.antigravityStatus : current.antigravityHooksStatus,
                         codexHooksStatus: updates.codexStatus !== undefined ? updates.codexStatus : current.codexHooksStatus,
                         openCodeHooksStatus: updates.openCodeStatus !== undefined ? updates.openCodeStatus : current.openCodeHooksStatus,
                       }
@@ -1814,10 +1861,36 @@ export default function TaskDetailRoute() {
       ) : null}
 
       <main className="ml-14 flex h-full min-w-0 flex-col">
-        {mainView === "chat" ? (
-          <InlineAiChatView taskId={state.task.id} />
-        ) : hasTerminal ? (
-          <div className="flex-1 flex flex-col min-h-0 rounded-lg overflow-hidden shadow-md transition-all duration-200 ease-out">
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-t-lg border-b border-border-default bg-bg-surface px-4 py-3">
+          <div className="min-w-0"><h1 className="max-w-xl truncate text-sm font-semibold text-text-primary">{state.task.title}</h1>
+            <p className="mt-1 text-xs text-text-muted">{agentMonitor.error ? tm("monitorUnavailable") : agentIsRunning ? tm("agentProcessHint") : tm(`statusHints.${state.task.status}`)}</p></div>
+          <LanguageSelector />
+          <nav className="flex gap-1" aria-label={tm("taskViews")}>
+            {(["activity", "results", "terminal"] as const).map((view) => <button key={view} type="button" aria-pressed={mainView === view}
+              onClick={() => { setMainView(view); setActivePanel(null); markDefaultPanelDismissed(); }}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium ${mainView === view ? "bg-brand-subtle text-text-brand" : "text-text-secondary hover:bg-bg-page"}`}>{tm(view)}</button>)}
+          </nav>
+          {state.task.agentType && <button type="button" disabled={launchPending || agentIsRunning} onClick={() => { void launchAgentInTerminal(); }}
+            className="rounded-md bg-brand-primary px-3 py-1.5 text-xs text-text-inverse disabled:opacity-50">{launchPending || taskRuntimes.some((runtime) => runtime.state === "starting") ? tm("startingAgent") : agentIsRunning ? tm("agentRunning") : tm("startAgent", { agent: state.task.agentType })}</button>}
+        </header>
+        {loadFailed && <LoadError inline onRetry={retryLoad} />}
+        {terminalTabs.error && <div role="alert" className="shrink-0 border-b border-status-warning/40 px-4 py-3 text-sm text-status-warning">
+          {tm("launchErrors.terminal-not-ready")} <button type="button" onClick={() => { void terminalTabs.refresh(); }} className="ml-3 text-brand-primary">{tm("retry")}</button>
+        </div>}
+        {(launchError || taskRuntimes.some((runtime) => runtime.errorCode)) && (
+          <div role="alert" className="shrink-0 border-b border-status-warning/40 bg-bg-surface px-4 py-3 text-sm">
+            <p className="text-status-warning">{tm(`launchErrors.${launchError ?? taskRuntimes.find((runtime) => runtime.errorCode)?.errorCode}`)}</p>
+            <button type="button" onClick={() => { setMainView("terminal"); requestActiveTerminalFocusAfterUiSettles(); }} className="mt-2 text-brand-primary">{tm("openTerminal")}</button>
+            {launchError === "missing-cli" && <Link href="/ai-accounts" className="ml-4 text-brand-primary">{tm("openAccounts")}</Link>}
+          </div>
+        )}
+        {(mainView === "activity" || mainView === "results") && <TaskWorkspace key={`${id}:${mainView}`} task={state.task} view={mainView}
+          onOpenTerminal={() => { setMainView("terminal"); setActivePanel(null); markDefaultPanelDismissed(); }}
+          onContinue={() => { setMainView("terminal"); setActivePanel(null); markDefaultPanelDismissed(); }}
+          onDone={() => { void movePaletteTaskToStatus(TaskStatus.DONE).catch(() => setLoadFailed(true)); }} />}
+        {mainView === "chat" && <InlineAiChatView taskId={state.task.id} />}
+        {hasTerminal ? (
+          <div className={`${mainView === "terminal" ? "flex-1 flex" : "hidden"} flex-col min-h-0 rounded-lg overflow-hidden shadow-md transition-all duration-200 ease-out`}>
             <div className="bg-terminal-chrome flex items-center gap-3 px-4 py-2.5 shrink-0">
               <span
                 data-testid="terminal-task-context"
@@ -1871,13 +1944,15 @@ export default function TaskDetailRoute() {
               }}
             >
               <TerminalLoader
+                isHidden={mainView !== "terminal"}
+                onStatus={handleTerminalStatus}
                 taskId={state.task.id}
                 tabs={state.task.sessionType === SessionType.TERMINAL ? terminalTabs.tabs : undefined}
                 isRemote={Boolean(state.task.sshHost)}
               />
             </div>
           </div>
-        ) : (
+        ) : mainView === "terminal" ? (
           <div className="flex-1 flex items-center justify-center border border-dashed border-border-default rounded-lg bg-bg-surface">
             {state.task.projectId ? (
               <ConnectTerminalForm
@@ -1897,7 +1972,7 @@ export default function TaskDetailRoute() {
               />
             ) : <p className="text-text-muted text-sm">{t("noTerminal")}</p>}
           </div>
-        )}
+        ) : null}
       </main>
 
       <CreateTaskModal

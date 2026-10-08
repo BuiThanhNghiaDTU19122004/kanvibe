@@ -1,0 +1,18 @@
+extends: ./electron-builder.yml
+electronDist: node_modules/electron/dist
+directories:
+  output: dist/windows
+files:
+  - build/renderer/**/*
+  - build/main/**/*
+  - electron/**/*
+  - messages/**/*
+  - package.json
+  - public/**/*
+  - tsconfig.json
+  - resources/kanvibe-windows.ico
+win:
+  icon: resources/kanvibe-windows.ico
+  signAndEditExecutable: false
+  target:
+    - dir

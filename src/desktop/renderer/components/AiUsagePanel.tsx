@@ -106,7 +106,7 @@ function UsageWindowRow({ usageWindow }: { usageWindow: AiUsageWindow }) {
     <div data-testid={`ai-usage-window-${usageWindow.modelName ?? usageWindow.kind}`}>
       <div className="flex items-baseline justify-between text-xs">
         <span className="text-text-secondary">{label}</span>
-        <span className="font-medium text-text-primary">{usageWindow.usedPercent}%</span>
+        <span className="font-medium text-text-primary">{Math.round(usageWindow.usedPercent * 10) / 10}%</span>
       </div>
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-bg-page">
         <div
@@ -122,13 +122,14 @@ function UsageWindowRow({ usageWindow }: { usageWindow: AiUsageWindow }) {
 }
 
 function UsageWindowGroupRows({ group }: { group: UsageWindowGroup }) {
+  const t = useTranslations("taskDetail.aiUsage");
   const scopedRows = group.scoped.map((usageWindow) => (
     <UsageWindowRow key={usageWindow.modelName} usageWindow={usageWindow} />
   ));
 
   // 딸릴 기간 한도가 없는 모델 쿼터는 들여쓸 대상이 없어 그대로 나열한다
   if (!group.total) {
-    return <div className="space-y-2">{scopedRows}</div>;
+    return <div className="space-y-2">{group.kind !== "model" && <p className="text-xs font-medium text-text-primary">{t(group.kind)}</p>}{scopedRows}</div>;
   }
 
   return (
@@ -228,7 +229,9 @@ function ProviderUsageCard({ group }: { group: ProviderAccountGroup }) {
     >
       <header className="mb-2 flex items-center gap-1.5">
         <AiProviderIcon provider={group.provider} size={15} />
-        <span className="text-xs font-semibold capitalize text-text-primary">{group.provider}</span>
+        <span className="text-xs font-semibold capitalize text-text-primary">
+          {group.provider === "antigravity" ? "Antigravity" : group.provider}
+        </span>
       </header>
 
       <div className="space-y-2.5">
@@ -275,7 +278,7 @@ function UsageStatusLine({
   );
 }
 
-export default function AiUsagePanel({ isOpen }: { isOpen: boolean }) {
+export default function AiUsagePanel({ isOpen, layout = "stack" }: { isOpen: boolean; layout?: "stack" | "grid" }) {
   const t = useTranslations("taskDetail.aiUsage");
   const { snapshot, isLoading, isRefreshing, hasFailed, refresh } = useAiUsage(isOpen);
 
@@ -298,7 +301,7 @@ export default function AiUsagePanel({ isOpen }: { isOpen: boolean }) {
         <p className="text-xs text-status-error">{t("snapshotFailed")}</p>
       ) : null}
 
-      <div className="space-y-2">
+      <div className={layout === "grid" ? "grid items-start gap-4 xl:grid-cols-3" : "space-y-2"}>
         {snapshot ? groupAccountsByProvider(snapshot.accounts).map((group) => (
           <ProviderUsageCard key={group.provider} group={group} />
         )) : null}

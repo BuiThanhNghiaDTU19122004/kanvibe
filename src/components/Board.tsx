@@ -13,6 +13,12 @@ import ProjectSelector from "./ProjectSelector";
 import TaskContextMenu from "./TaskContextMenu";
 import BranchTaskModal from "./BranchTaskModal";
 import DoneConfirmDialog from "./DoneConfirmDialog";
+import BoardEmptyState from "./BoardEmptyState";
+import FirstRunWizardDialog from "./FirstRunWizardDialog";
+import VibeDashboardView from "./VibeDashboardView";
+import LanguageSelector from "./LanguageSelector";
+import SetupChecklist from "./SetupChecklist";
+import { getAppSetting } from "@/desktop/renderer/actions/appSettings";
 import { deleteTask, getMoreDoneTasks, moveTaskToColumn } from "@/desktop/renderer/actions/kanban";
 import type { TasksByStatus } from "@/desktop/renderer/actions/kanban";
 import { useBoardCommands } from "@/desktop/renderer/components/BoardCommandProvider";
@@ -22,7 +28,7 @@ import { SessionType, TaskStatus, type KanbanTask } from "@/entities/KanbanTask"
 import type { Project } from "@/entities/Project";
 import { useAutoRefresh } from "@/desktop/renderer/hooks/useAutoRefresh";
 import { useProjectFilterParams } from "@/desktop/renderer/hooks/useProjectFilterParams";
-import { useRunningAgentPanes } from "@/desktop/renderer/hooks/useLiveAiSessions";
+import { useAgentMonitor } from "@/desktop/renderer/hooks/useLiveAiSessions";
 import { useBoardTaskDiffStats } from "@/desktop/renderer/hooks/useTaskDiffStats";
 import { useUnreadNotificationCountByTask } from "@/desktop/renderer/hooks/useUnreadNotificationCountByTask";
 import {
@@ -355,7 +361,9 @@ export default function Board({
   const ts = useTranslations("settings");
   const tt = useTranslations("task");
   const tc = useTranslations("common");
+  const td = useTranslations("dashboard");
   const locale = useLocale();
+  const [activeView, setActiveView] = useState<"kanban" | "dashboard">(() => sessionStorage.getItem("kanvibe:board-view") === "kanban" ? "kanban" : "dashboard");
   const [tasks, setTasks] = useState<TasksByStatus>(initialTasks);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProjectRegistryOpen, setIsProjectRegistryOpen] = useState(false);
@@ -365,7 +373,9 @@ export default function Board({
     projectId: string;
   } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const runningAgentPanes = useRunningAgentPanes(isMounted);
+  const agentMonitor = useAgentMonitor(isMounted);
+  const runningAgentPanes = agentMonitor.error ? [] : agentMonitor.value.panes;
+  useEffect(() => { sessionStorage.setItem("kanvibe:board-view", activeView); }, [activeView]);
   const [selectedProjectIds, setSelectedProjectIds] = useProjectFilterParams(
     projects.map((p) => p.id),
   );
@@ -379,6 +389,17 @@ export default function Board({
   const [pendingDoneResult, setPendingDoneResult] = useState<DropResult | null>(null);
   const [currentDefaultSessionType, setCurrentDefaultSessionType] = useState<SessionType>(defaultSessionType);
   const [shouldUseMacTitlebarLayout, setShouldUseMacTitlebarLayout] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      void Promise.all([getAppSetting("onboarding_completed"), getAppSetting("onboarding_seen")]).then(([completed, seen]) => {
+        if (!completed && !seen) {
+          setIsOnboardingOpen(true);
+        }
+      }).catch(() => {});
+    }
+  }, [projects.length]);
   const [, startDragPersistenceTransition] = useTransition();
   const unreadNotificationCountByTask = useUnreadNotificationCountByTask();
   const notificationCenterRef = useRef<NotificationCenterButtonHandle>(null);
@@ -543,6 +564,11 @@ export default function Board({
 
     return sorted;
   }, [boardSortContext, filteredTasks, sortPreference]);
+
+  const totalTaskCount = useMemo(
+    () => Object.values(displayedTasks).reduce((sum, list) => sum + list.length, 0),
+    [displayedTasks],
+  );
 
   /**
    * git을 다시 돌릴 태스크. 지금 손대고 있는 칸만 새로 집계하고 나머지 칸은 마지막으로 저장된 값을 보여준다.
@@ -893,7 +919,7 @@ export default function Board({
 
       executeDragMove(result);
     },
-    [executeDragMove, displayedTasks, isDoneAlertDismissed, tasks],
+    [executeDragMove, isDoneAlertDismissed, tasks],
   );
 
   const moveFocusedTaskToStatus = useCallback(
@@ -1008,20 +1034,59 @@ export default function Board({
   );
 
   const headerClassName = shouldUseMacTitlebarLayout
-    ? "flex items-center justify-end bg-bg-page px-6 pb-3 pl-20 pr-6 pt-10 [-webkit-app-region:drag]"
-    : "flex items-center justify-end border-b border-border-default bg-bg-surface px-6 py-3";
+    ? "flex items-center justify-between bg-bg-page px-6 pb-3 pl-20 pr-6 pt-10 [-webkit-app-region:drag]"
+    : "flex items-center justify-between border-b border-border-default bg-bg-surface px-6 py-3";
 
   const mainClassName = shouldUseMacTitlebarLayout ? "px-6 pb-6" : "p-6";
 
   return (
     <div className="min-h-screen bg-bg-page">
       <BoardPageFindBar vimModeEnabled={vimModeEnabled} />
-      <header className={headerClassName}>
-        <div className="flex items-center gap-3 [-webkit-app-region:no-drag]">
+      <header className={`${headerClassName} flex-wrap gap-3`}>
+        <div className="flex items-center gap-1 bg-bg-page border border-border-default rounded-lg p-0.5 [-webkit-app-region:no-drag]" role="group" aria-label="View switcher">
+          <button
+            type="button"
+            onClick={() => setActiveView("kanban")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+              activeView === "kanban"
+                ? "bg-bg-surface text-text-primary shadow-sm"
+                : "text-text-muted hover:text-text-primary"
+            }`}
+            data-testid="view-switch-kanban"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="5" height="18" rx="1" />
+              <rect x="10" y="3" width="5" height="12" rx="1" />
+              <rect x="17" y="3" width="5" height="8" rx="1" />
+            </svg>
+            <span>{td("viewKanban")}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView("dashboard")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+              activeView === "dashboard"
+                ? "bg-bg-surface text-text-primary shadow-sm"
+                : "text-text-muted hover:text-text-primary"
+            }`}
+            data-testid="view-switch-dashboard"
+          >
+            <span className="relative flex h-2 w-2">
+              {runningAgentPanes.length > 0 && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75" />
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${runningAgentPanes.length > 0 ? "bg-status-success" : "bg-text-muted"}`} />
+            </span>
+            <span>{td("viewDashboard")}</span>
+          </button>
+        </div>
+
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-3 [-webkit-app-region:no-drag]">
+          <LanguageSelector />
           <div
             role="group"
             aria-label={t("taskKindFilter.label")}
-            className="flex h-[34px] w-[180px] shrink-0 items-stretch rounded-md border border-border-default bg-bg-page p-0.5"
+            className="flex h-[34px] min-w-[210px] shrink-0 items-stretch rounded-md border border-border-default bg-bg-page p-0.5"
             data-testid="task-kind-filter"
           >
             {TASK_KIND_FILTER_VALUES.map((filter) => {
@@ -1033,7 +1098,7 @@ export default function Board({
                   aria-pressed={isActive}
                   title={t(`taskKindFilter.descriptions.${filter}`)}
                   onClick={() => setTaskKindFilter(filter)}
-                  className={`flex flex-1 items-center justify-center rounded text-sm font-medium transition-colors ${
+                  className={`flex flex-1 items-center justify-center whitespace-nowrap px-2 rounded text-sm font-medium transition-colors ${
                     isActive
                       ? "bg-brand-primary text-text-inverse shadow-sm"
                       : "text-text-secondary hover:bg-bg-surface hover:text-text-primary"
@@ -1088,7 +1153,7 @@ export default function Board({
           </button>
           <button
             onClick={openSettingsPage}
-            className="p-1.5 rounded-md border border-transparent text-text-muted transition-colors hover:border-border-default hover:bg-bg-page hover:text-text-primary"
+            className="p-1.5 rounded-md border border-transparent text-text-secondary transition-colors hover:border-border-default hover:bg-bg-page hover:text-text-primary"
             title={tc("settings")}
             aria-label={tc("settings")}
           >
@@ -1102,9 +1167,40 @@ export default function Board({
       </header>
 
       <main className={mainClassName}>
+        {isMounted && <SetupChecklist hasProjects={projects.some((project) => !project.isWorktree)}
+          hasStartedAgent={agentMonitor.value.runtimes.some((runtime) => !!runtime.observedAt)}
+          onSetup={() => setIsOnboardingOpen(true)} onCreateTask={() => setIsModalOpen(true)} />}
         {isMounted ? (
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="flex gap-3 overflow-x-auto pb-2">
+          totalTaskCount === 0 && activeView === "kanban" ? (
+            <BoardEmptyState
+              onNewTask={() => setIsModalOpen(true)}
+              onScanProjects={() => setIsProjectRegistryOpen(true)}
+              hasProjects={projects.length > 0}
+            />
+          ) : activeView === "dashboard" ? (
+            <VibeDashboardView
+              tasks={displayedTasks}
+              runningAgentPanes={runningAgentPanes}
+              runtimes={agentMonitor.value.runtimes}
+              monitorError={agentMonitor.error}
+              monitorReadAt={agentMonitor.updatedAt}
+              onRetryMonitor={agentMonitor.retry}
+              completedTotal={selectedProjectIds.length === 0 && taskKindFilter === "all" ? doneTotal : undefined}
+              projects={projects}
+              projectNameMap={new Map(Object.entries(projectNameMap))}
+              projectColorMap={new Map(Object.entries(projectColorMap))}
+              projectIconMap={new Map(Object.entries(projectIconMap))}
+              diffStatsByTaskId={diffStatsByTaskId}
+              onNewTask={() => setIsModalOpen(true)}
+              onSelectTask={(taskId) => {
+                const task = Object.values(displayedTasks).flat().find((item) => item.id === taskId);
+                const searchParams = task?.status === TaskStatus.REVIEW ? "view=results" : task?.status === TaskStatus.PENDING ? "view=terminal" : undefined;
+                void navigateToTaskDetail(taskId, { currentLocale: locale, searchParams });
+              }}
+            />
+          ) : (
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="flex gap-3 overflow-x-auto pb-2">
               {COLUMNS.map((col) => (
                 <Column
                   key={col.status}
@@ -1131,6 +1227,7 @@ export default function Board({
               ))}
             </div>
           </DragDropContext>
+          )
         ) : (
           <div className="flex gap-4 overflow-x-auto">
             {COLUMNS.map((col) => (
@@ -1205,6 +1302,13 @@ export default function Board({
         isOpen={!!pendingDoneResult}
         onConfirm={handleDoneConfirm}
         onCancel={handleDoneCancel}
+      />
+
+      <FirstRunWizardDialog
+        isOpen={isOnboardingOpen}
+        projectCount={projects.filter((project) => !project.isWorktree).length}
+        onCreateTask={() => { setIsOnboardingOpen(false); setIsModalOpen(true); }}
+        onComplete={() => setIsOnboardingOpen(false)}
       />
     </div>
   );

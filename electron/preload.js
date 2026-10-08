@@ -44,6 +44,7 @@ window.addEventListener("unhandledrejection", (event) => {
 
 contextBridge.exposeInMainWorld("kanvibeDesktop", {
   isDesktop: true,
+  hasTitleBarOverlay: process.platform === "win32" || (process.platform === "linux" && !process.env.WSL_DISTRO_NAME && !process.env.WSL_INTEROP),
   logRendererError(event, payload) {
     sendRendererLog(event, payload);
   },
@@ -65,6 +66,9 @@ contextBridge.exposeInMainWorld("kanvibeDesktop", {
   },
   writeTerminal(taskId, tabId, data) {
     ipcRenderer.send("kanvibe:terminal-write", taskId, tabId, data);
+  },
+  launchAgent(taskId, tabId) {
+    return ipcRenderer.invoke("kanvibe:agent-launch", taskId, tabId);
   },
   resizeTerminal(taskId, tabId, cols, rows) {
     ipcRenderer.send("kanvibe:terminal-resize", taskId, tabId, cols, rows);
@@ -216,5 +220,8 @@ contextBridge.exposeInMainWorld("kanvibeDesktop", {
   },
   notifyShortcutCaptureChanged(isCapturing) {
     ipcRenderer.send("kanvibe:shortcut-capture-changed", Boolean(isCapturing));
+  },
+  updateTitleBarOverlay(resolvedTheme) {
+    ipcRenderer.send("kanvibe:update-title-bar-overlay", resolvedTheme);
   },
 });

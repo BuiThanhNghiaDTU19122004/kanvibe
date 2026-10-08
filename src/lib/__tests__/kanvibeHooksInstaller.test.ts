@@ -3,11 +3,11 @@ import type { TextFileReadResult } from "@/lib/hostFileAccess";
 import type { ShellHookProviderFile } from "@/lib/shellHookProvider";
 
 const mockSetupClaudeHooks = vi.fn();
-const mockSetupGeminiHooks = vi.fn();
+const mockSetupAntigravityHooks = vi.fn();
 const mockSetupCodexHooks = vi.fn();
 const mockSetupOpenCodeHooks = vi.fn();
 const mockGetClaudeHooksStatus = vi.fn();
-const mockGetGeminiHooksStatus = vi.fn();
+const mockGetAntigravityHooksStatus = vi.fn();
 const mockGetCodexHooksStatus = vi.fn();
 const mockGetOpenCodeHooksStatus = vi.fn();
 const mockGetHookServerUrl = vi.fn();
@@ -21,10 +21,10 @@ vi.mock("@/lib/claudeHooksSetup", async (importOriginal) => ({
   getClaudeHooksStatus: (...args: unknown[]) => mockGetClaudeHooksStatus(...args),
 }));
 
-vi.mock("@/lib/geminiHooksSetup", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/geminiHooksSetup")>()),
-  setupGeminiHooks: (...args: unknown[]) => mockSetupGeminiHooks(...args),
-  getGeminiHooksStatus: (...args: unknown[]) => mockGetGeminiHooksStatus(...args),
+vi.mock("@/lib/antigravityHooksSetup", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/antigravityHooksSetup")>()),
+  setupAntigravityHooks: (...args: unknown[]) => mockSetupAntigravityHooks(...args),
+  getAntigravityHooksStatus: (...args: unknown[]) => mockGetAntigravityHooksStatus(...args),
 }));
 
 vi.mock("@/lib/codexHooksSetup", async (importOriginal) => ({
@@ -98,7 +98,7 @@ describe("kanvibeHooksInstaller", () => {
     vi.resetModules();
     vi.clearAllMocks();
     mockSetupClaudeHooks.mockResolvedValue(undefined);
-    mockSetupGeminiHooks.mockResolvedValue(undefined);
+    mockSetupAntigravityHooks.mockResolvedValue(undefined);
     mockSetupCodexHooks.mockResolvedValue(undefined);
     mockSetupOpenCodeHooks.mockResolvedValue(undefined);
     mockGetHookServerUrl.mockResolvedValue("http://192.168.0.8:9736");
@@ -106,7 +106,7 @@ describe("kanvibeHooksInstaller", () => {
     mockReadTextFiles.mockResolvedValue(buildReadResults());
     mockWriteHookProviderFiles.mockResolvedValue(undefined);
     mockGetClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mockGetGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mockGetAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mockGetCodexHooksStatus.mockResolvedValue({ installed: true });
     mockGetOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -127,8 +127,8 @@ describe("kanvibeHooksInstaller", () => {
     expect(getWrittenFilePaths()).toEqual(expect.arrayContaining([
       "/repo/.claude/hooks/kanvibe-prompt-hook.sh",
       "/repo/.claude/settings.json",
-      "/repo/.gemini/hooks/kanvibe-stop-hook.sh",
-      "/repo/.gemini/settings.json",
+      "/repo/.antigravity/hooks/kanvibe-stop-hook.sh",
+      "/repo/.antigravity/settings.json",
       "/repo/.codex/hooks/kanvibe-permission-hook.sh",
       "/repo/.codex/hooks.json",
       "/repo/.codex/config.toml",
@@ -179,7 +179,7 @@ describe("kanvibeHooksInstaller", () => {
     expect(mockReadTextFiles).toHaveBeenCalledTimes(1);
     expect(mockReadTextFiles).toHaveBeenCalledWith([
       "/remote/repo/.claude/settings.json",
-      "/remote/repo/.gemini/settings.json",
+      "/remote/repo/.antigravity/settings.json",
       "/remote/repo/.codex/config.toml",
       "/remote/repo/.codex/hooks.json",
     ], "remote-host");
@@ -197,7 +197,7 @@ describe("kanvibeHooksInstaller", () => {
     expect([...readPaths, ...getWrittenFilePaths()].join("\n")).not.toContain("hooks-targets.json");
   });
 
-  it("stale한 Claude/Gemini hook entry는 재설치 시 현재 project 경로로 덮어쓴다", async () => {
+  it("stale한 Claude/Antigravity hook entry는 재설치 시 현재 project 경로로 덮어쓴다", async () => {
     // Given
     mockReadTextFiles.mockResolvedValue(buildReadResults({
       "/remote/repo/.claude/settings.json": JSON.stringify({
@@ -208,10 +208,10 @@ describe("kanvibeHooksInstaller", () => {
           Stop: [{ hooks: [{ type: "command", command: '"/tmp/old/.claude/hooks/kanvibe-stop-hook.sh"', timeout: 10 }] }],
         },
       }),
-      "/remote/repo/.gemini/settings.json": JSON.stringify({
+      "/remote/repo/.antigravity/settings.json": JSON.stringify({
         hooks: {
-          BeforeAgent: [{ matcher: "*", hooks: [{ type: "command", command: '"/tmp/old/.gemini/hooks/kanvibe-prompt-hook.sh"', timeout: 10000 }] }],
-          AfterAgent: [{ matcher: "*", hooks: [{ type: "command", command: '"/tmp/old/.gemini/hooks/kanvibe-stop-hook.sh"', timeout: 10000 }] }],
+          BeforeAgent: [{ matcher: "*", hooks: [{ type: "command", command: '"/tmp/old/.antigravity/hooks/kanvibe-prompt-hook.sh"', timeout: 10000 }] }],
+          AfterAgent: [{ matcher: "*", hooks: [{ type: "command", command: '"/tmp/old/.antigravity/hooks/kanvibe-stop-hook.sh"', timeout: 10000 }] }],
         },
       }),
     }));
@@ -229,11 +229,11 @@ describe("kanvibeHooksInstaller", () => {
     expect(claudeSettings.hooks.Stop).toHaveLength(1);
     expect(claudeSettings.hooks.Stop[0].hooks[0].command).toBe('"$CLAUDE_PROJECT_DIR"/.claude/hooks/kanvibe-stop-hook.sh');
 
-    const geminiSettings = JSON.parse(findWrittenContent("/remote/repo/.gemini/settings.json"));
-    expect(geminiSettings.hooks.BeforeAgent).toHaveLength(1);
-    expect(geminiSettings.hooks.BeforeAgent[0].hooks[0].command).toBe('"$GEMINI_PROJECT_DIR"/.gemini/hooks/kanvibe-prompt-hook.sh');
-    expect(geminiSettings.hooks.AfterAgent).toHaveLength(1);
-    expect(geminiSettings.hooks.AfterAgent[0].hooks[0].command).toBe('"$GEMINI_PROJECT_DIR"/.gemini/hooks/kanvibe-stop-hook.sh');
+    const antigravitySettings = JSON.parse(findWrittenContent("/remote/repo/.antigravity/settings.json"));
+    expect(antigravitySettings.hooks.BeforeAgent).toHaveLength(1);
+    expect(antigravitySettings.hooks.BeforeAgent[0].hooks[0].command).toBe('"$ANTIGRAVITY_PROJECT_DIR"/.antigravity/hooks/kanvibe-prompt-hook.sh');
+    expect(antigravitySettings.hooks.AfterAgent).toHaveLength(1);
+    expect(antigravitySettings.hooks.AfterAgent[0].hooks[0].command).toBe('"$ANTIGRAVITY_PROJECT_DIR"/.antigravity/hooks/kanvibe-stop-hook.sh');
   });
 
   it("Codex 재설치는 기존 설정을 보존하면서 최신 hooks.json/config.toml 구조로 갱신한다", async () => {
@@ -271,7 +271,7 @@ describe("kanvibeHooksInstaller", () => {
     // Then
     expect(mockWriteHookProviderFiles).toHaveBeenCalledTimes(HOOK_PROVIDER_COUNT);
     expect(mockGetClaudeHooksStatus).not.toHaveBeenCalled();
-    expect(mockGetGeminiHooksStatus).not.toHaveBeenCalled();
+    expect(mockGetAntigravityHooksStatus).not.toHaveBeenCalled();
     expect(mockGetCodexHooksStatus).not.toHaveBeenCalled();
     expect(mockGetOpenCodeHooksStatus).not.toHaveBeenCalled();
   });
@@ -284,7 +284,7 @@ describe("kanvibeHooksInstaller", () => {
       const onSuccess = vi.fn();
       const onFailure = vi.fn();
       mockGetClaudeHooksStatus.mockResolvedValue({ installed: true, hasSettingsEntry: true });
-      mockGetGeminiHooksStatus.mockResolvedValue({ installed: true, hasSettingsEntry: true });
+      mockGetAntigravityHooksStatus.mockResolvedValue({ installed: true, hasSettingsEntry: true });
       mockGetCodexHooksStatus.mockResolvedValue({ installed: true, hasConfigEntry: true });
       mockGetOpenCodeHooksStatus.mockResolvedValue({ installed: true, hasRegisteredPlugin: true });
 
@@ -302,7 +302,7 @@ describe("kanvibeHooksInstaller", () => {
       await vi.runAllTimersAsync();
 
       expect(mockGetClaudeHooksStatus).toHaveBeenCalledWith("/remote/repo", "task-2", "remote-host");
-      expect(mockGetGeminiHooksStatus).toHaveBeenCalledWith("/remote/repo", "task-2", "remote-host");
+      expect(mockGetAntigravityHooksStatus).toHaveBeenCalledWith("/remote/repo", "task-2", "remote-host");
       expect(mockGetCodexHooksStatus).toHaveBeenCalledWith("/remote/repo", "task-2", "remote-host");
       expect(mockGetOpenCodeHooksStatus).toHaveBeenCalledWith("/remote/repo", "task-2", "remote-host");
       expect(mockWriteHookProviderFiles).not.toHaveBeenCalled();
@@ -353,7 +353,7 @@ describe("kanvibeHooksInstaller", () => {
     // Then
     expect(mockSetupCodexHooks).toHaveBeenCalledWith("/repo", "task-1", "http://192.168.0.8:9736", null);
     expect(mockSetupClaudeHooks).not.toHaveBeenCalled();
-    expect(mockSetupGeminiHooks).not.toHaveBeenCalled();
+    expect(mockSetupAntigravityHooks).not.toHaveBeenCalled();
     expect(mockSetupOpenCodeHooks).not.toHaveBeenCalled();
     expect(mockWriteHookProviderFiles).not.toHaveBeenCalled();
   });
@@ -361,7 +361,7 @@ describe("kanvibeHooksInstaller", () => {
   it("OpenCode 등록만 누락된 상태는 전체 hook 설치 실패로 처리하지 않는다", async () => {
     // Given
     mockGetClaudeHooksStatus.mockResolvedValue({ installed: true, hasSettingsEntry: true });
-    mockGetGeminiHooksStatus.mockResolvedValue({ installed: true, hasSettingsEntry: true });
+    mockGetAntigravityHooksStatus.mockResolvedValue({ installed: true, hasSettingsEntry: true });
     mockGetCodexHooksStatus.mockResolvedValue({ installed: true, hasConfigEntry: true });
     mockGetOpenCodeHooksStatus.mockResolvedValue({
       installed: false,
@@ -453,7 +453,7 @@ describe("kanvibeHooksInstaller", () => {
       await result;
       expect(mockSetupCodexHooks).toHaveBeenCalledTimes(3);
       expect(mockSetupClaudeHooks).not.toHaveBeenCalled();
-      expect(mockSetupGeminiHooks).not.toHaveBeenCalled();
+      expect(mockSetupAntigravityHooks).not.toHaveBeenCalled();
       expect(mockSetupOpenCodeHooks).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
@@ -549,7 +549,7 @@ describe("kanvibeHooksInstaller", () => {
   it("설치 후 provider별 검증 결과를 로그로 남긴다", async () => {
     // Given
     mockGetClaudeHooksStatus.mockResolvedValue({ installed: true, hasSettingsEntry: true });
-    mockGetGeminiHooksStatus.mockResolvedValue({ installed: true, hasSettingsEntry: true });
+    mockGetAntigravityHooksStatus.mockResolvedValue({ installed: true, hasSettingsEntry: true });
     mockGetCodexHooksStatus.mockResolvedValue({ installed: true, hasConfigEntry: true });
     mockGetOpenCodeHooksStatus.mockResolvedValue({ installed: true, hasRegisteredPlugin: true });
 

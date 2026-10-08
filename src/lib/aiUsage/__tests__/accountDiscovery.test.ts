@@ -40,6 +40,7 @@ describe("discoverProviderAccounts(claude)", () => {
   beforeEach(async () => {
     fakeHome = await mkdtemp(path.join(tmpdir(), "kanvibe-home-"));
     vi.stubEnv("HOME", fakeHome);
+    vi.stubEnv("USERPROFILE", fakeHome);
     mockReadClaudeKeychainCredentials.mockResolvedValue({ outcome: "absent" });
   });
 
@@ -214,6 +215,7 @@ describe("discoverProviderAccounts(codex)", () => {
   beforeEach(async () => {
     fakeHome = await mkdtemp(path.join(tmpdir(), "kanvibe-home-"));
     vi.stubEnv("HOME", fakeHome);
+    vi.stubEnv("USERPROFILE", fakeHome);
     vi.stubEnv("CODEX_HOME", "");
   });
 
@@ -251,75 +253,9 @@ describe("discoverProviderAccounts(codex)", () => {
   });
 });
 
-describe("discoverProviderAccounts(gemini)", () => {
-  beforeEach(async () => {
-    fakeHome = await mkdtemp(path.join(tmpdir(), "kanvibe-home-"));
-    vi.stubEnv("HOME", fakeHome);
-    vi.stubEnv("GEMINI_CLI_HOME", "");
-  });
-
-  afterEach(async () => {
-    await rm(fakeHome, { recursive: true, force: true });
-    vi.unstubAllEnvs();
-    vi.resetAllMocks();
-  });
-
-  async function writeGeminiCredentials(configDir: string) {
-    await mkdir(configDir, { recursive: true });
-    await writeFile(
-      path.join(configDir, "oauth_creds.json"),
-      JSON.stringify({ access_token: "token", refresh_token: "refresh", expiry_date: 0 }),
-      "utf-8",
-    );
-  }
-
-  it("홈 아래 기본 .gemini의 계정을 찾는다", async () => {
-    await writeGeminiCredentials(path.join(fakeHome, ".gemini"));
-
-    const accounts = await discoverProviderAccounts("gemini");
-
-    expect(accounts).toHaveLength(1);
-    expect(accounts[0].configDir).toBe(path.join(fakeHome, ".gemini"));
-    expect(accounts[0].accountRoot).toBe(fakeHome);
-  });
-
-  it("GEMINI_CLI_HOME이 가리키는 루트 아래 .gemini도 계정으로 찾는다", async () => {
-    const workRoot = path.join(fakeHome, ".gemini-work");
-    await writeGeminiCredentials(path.join(workRoot, ".gemini"));
-
-    const accounts = await discoverProviderAccounts("gemini");
-
-    expect(accounts).toHaveLength(1);
-    expect(accounts[0].accountRoot).toBe(workRoot);
-    expect(accounts[0].configDir).toBe(path.join(workRoot, ".gemini"));
-  });
-
-  it("계정이 여러 개면 계정 이름으로 서로를 가른다", async () => {
-    await writeGeminiCredentials(path.join(fakeHome, ".gemini"));
-    await writeGeminiCredentials(path.join(fakeHome, ".gemini-work", ".gemini"));
-
-    const labels = (await discoverProviderAccounts("gemini")).map((account) => account.label);
-
-    expect(labels).toEqual(["Gemini", "work"]);
-  });
-
-  it("등록해 둔 계정은 로그아웃돼 있어도 자리를 지킨다", async () => {
-    const workRoot = path.join(fakeHome, ".gemini-work");
-
-    const accounts = await discoverProviderAccounts("gemini", [
-      { provider: "gemini", accountRoot: workRoot, accountName: "work" },
-    ]);
-
-    expect(accounts).toHaveLength(1);
-    expect(accounts[0].label).toBe("work");
-    expect(accounts[0].configDir).toBe(path.join(workRoot, ".gemini"));
-  });
-
-  it("다른 provider의 등록은 이 provider의 목록에 섞이지 않는다", async () => {
-    const accounts = await discoverProviderAccounts("gemini", [
-      { provider: "claude", accountRoot: path.join(fakeHome, ".claude-work"), accountName: "work" },
-    ]);
-
-    expect(accounts).toEqual([]);
+describe("Antigravity keyring discovery", () => {
+  it("provides the native account without probing unrelated credential files", async () => {
+    const accounts = await discoverProviderAccounts("antigravity", []);
+    expect(accounts).toEqual([{ provider: "antigravity", accountId: "antigravity-default", accountRoot: "antigravity-default", configDir: "", label: "Antigravity" }]);
   });
 });

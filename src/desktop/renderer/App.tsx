@@ -8,8 +8,9 @@ import NotificationListener from "@/desktop/renderer/components/NotificationList
 import ReleaseUpdateDialog from "@/desktop/renderer/components/ReleaseUpdateDialog";
 import TaskQuickSearchDialog from "@/desktop/renderer/components/TaskQuickSearchDialog";
 import CommandPaletteDialog from "@/desktop/renderer/components/CommandPaletteDialog";
-import { DEFAULT_LOCALE, getSafeLocale, isSupportedLocale, messagesByLocale } from "@/desktop/renderer/utils/locales";
+import { DEFAULT_LOCALE, getSafeLocale, isSupportedLocale, getLocaleMessages, readLocalePreference, saveLocalePreference } from "@/desktop/renderer/utils/locales";
 import { triggerDesktopRefresh } from "@/desktop/renderer/utils/refresh";
+import SettingsLayout from "@/desktop/renderer/components/SettingsLayout";
 import BoardRoute from "@/desktop/renderer/routes/BoardRoute";
 import { getThemePreference, type ThemePreference } from "@/desktop/renderer/actions/appSettings";
 import { applyThemePreference, THEME_PREFERENCE_CHANGED_EVENT } from "@/desktop/renderer/utils/theme";
@@ -91,7 +92,10 @@ function ThemeController() {
 function LocaleShell() {
   const { locale } = useParams();
   const safeLocale = getSafeLocale(locale);
-  const messages = useMemo(() => messagesByLocale[safeLocale], [safeLocale]);
+  const messages = useMemo(() => getLocaleMessages(safeLocale), [safeLocale]);
+  useEffect(() => {
+    if (locale && isSupportedLocale(locale)) { saveLocalePreference(locale); document.documentElement.lang = locale; }
+  }, [locale]);
 
   if (locale && !isSupportedLocale(locale)) {
     return <Navigate to={`/${DEFAULT_LOCALE}`} replace />;
@@ -111,6 +115,10 @@ function LocaleShell() {
       </BoardCommandProvider>
     </IntlProvider>
   );
+}
+
+function PreferredLocaleRedirect() {
+  return <Navigate to={`/${readLocalePreference()}`} replace />;
 }
 
 export default function App() {
@@ -196,20 +204,32 @@ export default function App() {
   }, []);
 
   return (
+    <div className={window.kanvibeDesktop?.hasTitleBarOverlay ? "desktop-window-shell" : undefined}>
+      {window.kanvibeDesktop?.hasTitleBarOverlay && (
+        <div className="desktop-window-titlebar" data-testid="desktop-window-titlebar">
+          <span className="desktop-window-title">Kanvibe</span>
+        </div>
+      )}
     <HashRouter>
       <Routes>
-        <Route path="/" element={<Navigate to={`/${DEFAULT_LOCALE}`} replace />} />
+        <Route path="/" element={<PreferredLocaleRedirect />} />
         <Route path="/:locale" element={<LocaleShell />}>
           <Route index element={<BoardRoute />} />
-          <Route path="ai-accounts" element={<DeferredRoute><AiAccountsRoute /></DeferredRoute>} />
-          <Route path="pane-layout" element={<DeferredRoute><PaneLayoutRoute /></DeferredRoute>} />
-          <Route path="settings" element={<DeferredRoute><SettingsRoute /></DeferredRoute>} />
-          <Route path="settings/shortcuts" element={<DeferredRoute><ShortcutSettingsRoute /></DeferredRoute>} />
+          <Route path="ai-accounts" element={<Navigate to="../settings/ai-accounts" replace />} />
+          <Route path="pane-layout" element={<Navigate to="../settings/pane-layout" replace />} />
+          <Route path="settings" element={<SettingsLayout />}>
+            <Route index element={<Navigate to="appearance" replace />} />
+            <Route path="ai-accounts" element={<DeferredRoute><AiAccountsRoute /></DeferredRoute>} />
+            <Route path="pane-layout" element={<DeferredRoute><PaneLayoutRoute /></DeferredRoute>} />
+            <Route path="shortcuts" element={<DeferredRoute><ShortcutSettingsRoute /></DeferredRoute>} />
+            <Route path=":section" element={<DeferredRoute><SettingsRoute /></DeferredRoute>} />
+          </Route>
           <Route path="task/:id" element={<DeferredRoute><TaskDetailRoute /></DeferredRoute>} />
           <Route path="task/:id/diff" element={<DeferredRoute><DiffRoute /></DeferredRoute>} />
           <Route path="*" element={<DeferredRoute><NotFoundRoute /></DeferredRoute>} />
         </Route>
       </Routes>
     </HashRouter>
+    </div>
   );
 }

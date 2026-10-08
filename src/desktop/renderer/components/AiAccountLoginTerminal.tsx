@@ -16,7 +16,7 @@ const LOGIN_TERMINAL_FONT_FAMILY = "monospace";
 /**
  * provider CLI의 로그인 화면을 앱 안에서 그대로 보여준다.
  *
- * 브라우저로 넘어가는 provider는 안내만 지나가지만, Gemini처럼 첫 실행 화면에서 인증 방식을
+ * 브라우저로 넘어가는 provider는 안내만 지나가지만, Antigravity처럼 첫 실행 화면에서 인증 방식을
  * 골라야 하는 CLI는 사용자가 여기서 직접 고를 수 있어야 터미널로 나가지 않는다.
  */
 export default function AiAccountLoginTerminal({
@@ -29,7 +29,7 @@ export default function AiAccountLoginTerminal({
 
   onExitRef.current = onExit;
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (isCancelled: () => boolean) => {
     if (!containerRef.current) {
       return undefined;
     }
@@ -39,6 +39,7 @@ export default function AiAccountLoginTerminal({
       import("@xterm/addon-fit"),
       import("@xterm/addon-web-links"),
     ]);
+    if (isCancelled() || !containerRef.current) return undefined;
 
     const terminal = new XTerm(createTerminalOptions(LOGIN_TERMINAL_FONT_FAMILY));
     const fitAddon = new FitAddon();
@@ -80,6 +81,13 @@ export default function AiAccountLoginTerminal({
       });
     });
 
+    if (isCancelled()) {
+      osc52ClipboardHandler.dispose();
+      unsubscribeData?.();
+      unsubscribeExit?.();
+      terminal.dispose();
+      return undefined;
+    }
     const loginReady = await window.kanvibeDesktop?.openAiAccountLogin?.(
       provider,
       accountRoot,
@@ -96,6 +104,8 @@ export default function AiAccountLoginTerminal({
         terminal.dispose();
       };
     }
+
+    if (loginReady.authenticated) onExitRef.current(0);
 
     terminal.onData((data) => {
       window.kanvibeDesktop?.writeAiAccountLogin?.(accountRoot, data);
@@ -123,7 +133,7 @@ export default function AiAccountLoginTerminal({
     let isDisposed = false;
     let cleanup: (() => void) | undefined;
 
-    void connect()
+    void connect(() => isDisposed)
       .then((dispose) => {
         if (isDisposed) {
           dispose?.();
@@ -138,14 +148,15 @@ export default function AiAccountLoginTerminal({
 
     return () => {
       isDisposed = true;
+      window.kanvibeDesktop?.closeAiAccountLogin?.(accountRoot);
       cleanup?.();
     };
-  }, [connect]);
+  }, [connect, accountRoot]);
 
   return (
     <div
       ref={containerRef}
-      className="h-64 w-full overflow-hidden rounded-md bg-terminal-bg p-2"
+      className="min-h-0 w-full flex-1 overflow-hidden rounded-md bg-terminal-bg p-2"
       data-testid="ai-account-login-terminal"
     />
   );

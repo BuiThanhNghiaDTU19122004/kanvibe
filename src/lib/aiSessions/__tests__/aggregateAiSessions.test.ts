@@ -4,13 +4,13 @@ const {
   mockReadClaudeSessions,
   mockReadCodexSessions,
   mockReadOpenCodeSessions,
-  mockReadGeminiSessions,
+  mockReadAntigravitySessions,
   mockIsSSHTransportError,
 } = vi.hoisted(() => ({
   mockReadClaudeSessions: vi.fn(),
   mockReadCodexSessions: vi.fn(),
   mockReadOpenCodeSessions: vi.fn(),
-  mockReadGeminiSessions: vi.fn(),
+  mockReadAntigravitySessions: vi.fn(),
   mockIsSSHTransportError: vi.fn(),
 }));
 
@@ -29,9 +29,9 @@ vi.mock("@/lib/aiSessions/readOpenCodeSessions", () => ({
   readOpenCodeSessionDetail: vi.fn(),
 }));
 
-vi.mock("@/lib/aiSessions/readGeminiSessions", () => ({
-  readGeminiSessions: mockReadGeminiSessions,
-  readGeminiSessionDetail: vi.fn(),
+vi.mock("@/lib/aiSessions/readAntigravitySessions", () => ({
+  readAntigravitySessions: mockReadAntigravitySessions,
+  readAntigravitySessionDetail: vi.fn(),
 }));
 
 vi.mock("@/lib/gitOperations", () => ({
@@ -92,8 +92,8 @@ describe("aggregateAiSessions", () => {
       reason: null,
       sessions: [],
     });
-    mockReadGeminiSessions.mockResolvedValue({
-      provider: "gemini",
+    mockReadAntigravitySessions.mockResolvedValue({
+      provider: "antigravity",
       available: true,
       sessionCount: 0,
       reason: "No data",
@@ -112,7 +112,7 @@ describe("aggregateAiSessions", () => {
       { provider: "claude", available: true, sessionCount: 1, reason: null },
       { provider: "codex", available: true, sessionCount: 1, reason: null },
       { provider: "opencode", available: true, sessionCount: 0, reason: null },
-      { provider: "gemini", available: true, sessionCount: 0, reason: "No data" },
+      { provider: "antigravity", available: true, sessionCount: 0, reason: "No data" },
     ]);
   });
 
@@ -146,11 +146,11 @@ describe("aggregateAiSessions", () => {
       reason: "Remote OpenCode session reading is not available yet",
       sessions: [],
     });
-    mockReadGeminiSessions.mockResolvedValue({
-      provider: "gemini",
+    mockReadAntigravitySessions.mockResolvedValue({
+      provider: "antigravity",
       available: false,
       sessionCount: 0,
-      reason: "Gemini CLI directory not found",
+      reason: "Antigravity CLI directory not found",
       sessions: [],
     });
     mockIsSSHTransportError.mockImplementation((error: unknown) =>
@@ -180,10 +180,10 @@ describe("aggregateAiSessions", () => {
         reason: "Remote OpenCode session reading is not available yet",
       },
       {
-        provider: "gemini",
+        provider: "antigravity",
         available: false,
         sessionCount: 0,
-        reason: "Gemini CLI directory not found",
+        reason: "Antigravity CLI directory not found",
       },
     ]);
   });
@@ -210,7 +210,7 @@ describe("aggregateAiSessions", () => {
     });
     mockReadCodexSessions.mockResolvedValue({ provider: "codex", available: true, sessionCount: 0, reason: null, sessions: [] });
     mockReadOpenCodeSessions.mockResolvedValue({ provider: "opencode", available: true, sessionCount: 0, reason: null, sessions: [] });
-    mockReadGeminiSessions.mockResolvedValue({ provider: "gemini", available: true, sessionCount: 0, reason: null, sessions: [] });
+    mockReadAntigravitySessions.mockResolvedValue({ provider: "antigravity", available: true, sessionCount: 0, reason: null, sessions: [] });
 
     const result = await aggregateAiSessions({
       worktreePath: "/repo",
@@ -272,7 +272,7 @@ describe("aggregateAiSessions", () => {
       ],
     });
     mockReadOpenCodeSessions.mockResolvedValue({ provider: "opencode", available: true, sessionCount: 0, reason: null, sessions: [] });
-    mockReadGeminiSessions.mockResolvedValue({ provider: "gemini", available: true, sessionCount: 0, reason: null, sessions: [] });
+    mockReadAntigravitySessions.mockResolvedValue({ provider: "antigravity", available: true, sessionCount: 0, reason: null, sessions: [] });
 
     const firstPage = await aggregateAiSessions({
       worktreePath: "/repo",

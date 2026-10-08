@@ -1,3 +1,4 @@
+vi.mock("@/components/LoadError", () => ({ default: ({ onRetry }: { onRetry: () => void }) => <div role="alert"><button onClick={onRetry}>retry</button></div> }));
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import BoardRoute from "@/desktop/renderer/routes/BoardRoute";
@@ -192,7 +193,7 @@ describe("BoardRoute", () => {
       await waitFor(() => {
         expect(screen.queryByText("Loading...")).toBeNull();
       });
-      expect(screen.getByTestId("board-titles").textContent).toBe("");
+      expect(screen.getByRole("alert")).toBeTruthy();
     } finally {
       consoleError.mockRestore();
     }
@@ -211,6 +212,6 @@ describe("BoardRoute", () => {
 
     // Then
     expect(screen.queryByText("Loading...")).toBeNull();
-    expect(screen.getByTestId("board-titles").textContent).toBe("");
+    expect(screen.getByRole("alert")).toBeTruthy();
   });
 });

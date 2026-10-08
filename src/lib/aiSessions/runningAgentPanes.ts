@@ -10,7 +10,8 @@ const PROVIDER_BY_PANE_COMMAND: Record<string, AiSessionProvider> = {
   claude: "claude",
   codex: "codex",
   opencode: "opencode",
-  gemini: "gemini",
+  antigravity: "antigravity",
+  agy: "antigravity",
 };
 
 /**

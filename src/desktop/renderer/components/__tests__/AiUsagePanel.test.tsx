@@ -47,9 +47,9 @@ function createSnapshot(accounts?: AiUsageAccountResult[]): AiUsageSnapshot {
         fetchedAt: "2026-08-10T06:00:00.000Z",
       },
       {
-        provider: "gemini",
-        accountId: "gemini",
-        label: "gemini",
+        provider: "antigravity",
+        accountId: "antigravity",
+        label: "antigravity",
         status: "unavailable",
         planName: null,
         windows: [],
@@ -107,10 +107,10 @@ describe("AiUsagePanel", () => {
   it("자격증명이 없는 provider는 막대 대신 사유를 보여준다", () => {
     renderPanel();
 
-    const geminiCard = screen.getByTestId("ai-usage-provider-gemini");
+    const antigravityCard = screen.getByTestId("ai-usage-provider-antigravity");
 
-    expect(geminiCard.textContent).toContain("reasons.missing-credentials");
-    expect(geminiCard.querySelector("[style*='width']")).toBeNull();
+    expect(antigravityCard.textContent).toContain("reasons.missing-credentials");
+    expect(antigravityCard.querySelector("[style*='width']")).toBeNull();
   });
 
   it("직전 값을 이어 붙인 카드는 막대와 실패 사유를 함께 보여준다", () => {
@@ -169,9 +169,9 @@ describe("AiUsagePanel", () => {
   it("라벨이 provider 이름뿐이면 카드 제목을 되풀이하지 않는다", () => {
     renderPanel();
 
-    const geminiCard = screen.getByTestId("ai-usage-provider-gemini");
+    const antigravityCard = screen.getByTestId("ai-usage-provider-antigravity");
 
-    expect(geminiCard.querySelector("[data-testid='ai-usage-account-label']")).toBeNull();
+    expect(antigravityCard.querySelector("[data-testid='ai-usage-account-label']")).toBeNull();
   });
 
   it("모델별 주간 한도는 7일 한도 아래로 묶어 보여준다", () => {
@@ -197,7 +197,7 @@ describe("AiUsagePanel", () => {
     renderPanel({
       snapshot: createSnapshot([
         createClaudeAccount({
-          provider: "gemini",
+          provider: "antigravity",
           windows: [
             { kind: "model", modelName: "Pro", usedPercent: 12, resetsAt: null },
             { kind: "model", modelName: "Flash", usedPercent: 3, resetsAt: null },

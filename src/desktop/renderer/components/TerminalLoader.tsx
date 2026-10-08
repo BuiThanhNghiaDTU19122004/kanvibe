@@ -2,6 +2,8 @@ import Terminal from "@/desktop/renderer/components/Terminal";
 import type { TerminalTab } from "@/desktop/shared/terminalTabs";
 
 interface TerminalLoaderProps {
+  isHidden?: boolean;
+  onStatus?: (tabId: string | null, status: "ready" | "error", error?: string) => void;
   taskId: string;
   /**
    * terminal 세션의 탭 목록.
@@ -16,11 +18,11 @@ interface TerminalLoaderProps {
  * terminal 세션은 탭마다 xterm을 따로 두고 비활성 탭을 숨기기만 한다.
  * 언마운트하면 그 탭의 스크롤백이 사라져서, 돌아왔을 때 화면이 비어 보인다.
  */
-export default function TerminalLoader({ taskId, tabs, isRemote }: TerminalLoaderProps) {
+export default function TerminalLoader({ taskId, tabs, isRemote, onStatus, isHidden = false }: TerminalLoaderProps) {
   if (!tabs) {
     return (
       <div className="h-full">
-        <Terminal taskId={taskId} isRemote={isRemote} />
+        <Terminal taskId={taskId} isRemote={isRemote} onStatus={onStatus} isHidden={isHidden} />
       </div>
     );
   }
@@ -37,7 +39,7 @@ export default function TerminalLoader({ taskId, tabs, isRemote }: TerminalLoade
     <div className="h-full">
       {tabs.map((tab) => (
         <div key={tab.id} className={tab.isActive ? "h-full" : "hidden"}>
-          <Terminal taskId={taskId} tabId={tab.id} isHidden={!tab.isActive} isRemote={isRemote} />
+          <Terminal taskId={taskId} tabId={tab.id} isHidden={isHidden || !tab.isActive} isRemote={isRemote} onStatus={onStatus} />
         </div>
       ))}
     </div>

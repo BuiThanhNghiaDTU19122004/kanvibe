@@ -34,16 +34,16 @@ const DIFF_NAME_STATUS_MARKER = "__KANVIBE_DIFF_NAME_STATUS__";
 const DIFF_NUMSTAT_MARKER = "__KANVIBE_DIFF_NUMSTAT__";
 const DIFF_WORKING_TREE_MARKER = "__KANVIBE_DIFF_WORKING_TREE__";
 
-function buildGitDiffFilesCommand(worktreePath: string, baseBranch: string, branchName: string): string {
+function buildGitDiffFilesCommand(worktreePath: string, baseBranch: string, branchName: string, strict = false): string {
   const range = quoteShellArgument(`${baseBranch}...${branchName}`);
   return [
     `printf '%s\\n' ${quoteShellArgument(DIFF_NAME_STATUS_MARKER)}`,
-    `${buildGitCommand(worktreePath, ["diff", range, "--name-status"])} || true`,
+    `${buildGitCommand(worktreePath, ["diff", range, "--name-status"])}${strict ? "" : " || true"}`,
     `printf '%s\\n' ${quoteShellArgument(DIFF_NUMSTAT_MARKER)}`,
-    `${buildGitCommand(worktreePath, ["diff", range, "--numstat"])} || true`,
+    `${buildGitCommand(worktreePath, ["diff", range, "--numstat"])}${strict ? "" : " || true"}`,
     `printf '%s\\n' ${quoteShellArgument(DIFF_WORKING_TREE_MARKER)}`,
     buildGitCommand(worktreePath, ["status", "--porcelain", "--untracked-files=all"]),
-  ].join("; ");
+  ].join(strict ? " && " : "; ");
 }
 
 function parseGitDiffFilesCommandOutput(output: string) {
@@ -143,13 +143,13 @@ function parseWorkingTreeStatus(
  * 변경 파일 목록을 조회하되 실패를 `null`로 구분해 돌려준다.
  * 조회에 실패한 것과 정말 아무것도 바뀌지 않은 것을 같은 빈 배열로 뭉치면 캐시를 0으로 덮어쓰게 된다.
  */
-async function readGitDiffFiles(taskId: string): Promise<DiffFile[] | null> {
+async function readGitDiffFiles(taskId: string, strict = false): Promise<DiffFile[] | null> {
   try {
     const { worktreePath, branchName, baseBranch, sshHost } =
       await getTaskWorktreeInfo(taskId);
 
     const commandOutput = await execGit(
-      buildGitDiffFilesCommand(worktreePath, baseBranch, branchName),
+      buildGitDiffFilesCommand(worktreePath, baseBranch, branchName, strict),
       sshHost,
     );
     const diffSections = parseGitDiffFilesCommandOutput(commandOutput);
@@ -228,10 +228,12 @@ async function readGitDiffFiles(taskId: string): Promise<DiffFile[] | null> {
  * 사용자가 상세를 열어 본 태스크는 그 시점 값으로 최신화된다.
  */
 export async function getGitDiffFiles(
-  taskId: string
+  taskId: string,
+  strict = false,
 ): Promise<DiffFile[]> {
-  const files = await readGitDiffFiles(taskId);
+  const files = await readGitDiffFiles(taskId, strict);
   if (!files) {
+    if (strict) throw new Error("Could not read changes for this task");
     return [];
   }
 

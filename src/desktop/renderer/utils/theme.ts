@@ -2,7 +2,9 @@ import type { ThemePreference } from "@/desktop/renderer/actions/appSettings";
 
 export const THEME_PREFERENCE_CHANGED_EVENT = "kanvibe:theme-preference-changed";
 
-export function resolveThemePreference(themePreference: ThemePreference): "light" | "dark" {
+export type ResolvedTheme = "light" | "dark" | "dracula" | "one-dark" | "catppuccin-mocha";
+
+export function resolveThemePreference(themePreference: ThemePreference): ResolvedTheme {
   if (themePreference !== "system") {
     return themePreference;
   }
@@ -14,7 +16,8 @@ export function applyThemePreference(themePreference: ThemePreference) {
   const resolvedTheme = resolveThemePreference(themePreference);
   document.documentElement.dataset.themePreference = themePreference;
   document.documentElement.dataset.theme = resolvedTheme;
-  document.documentElement.style.colorScheme = resolvedTheme;
+  document.documentElement.style.colorScheme = resolvedTheme === "light" ? "light" : "dark";
+  window.kanvibeDesktop?.updateTitleBarOverlay?.(resolvedTheme);
 }
 
 export function notifyThemePreferenceChanged(themePreference: ThemePreference) {

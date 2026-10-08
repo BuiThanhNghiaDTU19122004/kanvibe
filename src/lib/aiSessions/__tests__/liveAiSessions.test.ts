@@ -22,7 +22,7 @@ async function writeJsonLines(filePath: string, values: unknown[], ageMs = 0) {
 }
 
 function claudeProjectDirectoryName(targetPath: string) {
-  return path.resolve(targetPath).replaceAll(path.sep, "-").replaceAll("_", "-");
+  return path.resolve(targetPath).replaceAll(path.sep, "-").replaceAll("_", "-").replaceAll(":", "-");
 }
 
 function claudeSessionFile(sessionId: string) {
@@ -103,6 +103,7 @@ describe("실행중 AI 세션 감지", { timeout: NATIVE_SQLITE_LOAD_TIMEOUT_MS 
     worktreePath = path.join(tempHome, "repo__worktrees", "task");
     await mkdir(worktreePath, { recursive: true });
     vi.stubEnv("HOME", tempHome);
+    if (process.platform === "win32") vi.stubEnv("USERPROFILE", tempHome);
   });
 
   afterEach(async () => {

@@ -24,7 +24,7 @@ describe("writeCredentialsAtomically", () => {
     expect(JSON.parse(await readFile(targetPath, "utf-8"))).toEqual({
       claudeAiOauth: { accessToken: "new" },
     });
-    expect((await stat(targetPath)).mode & 0o777).toBe(0o600);
+    if (process.platform !== "win32") expect((await stat(targetPath)).mode & 0o777).toBe(0o600);
   });
 
   it("쓰기가 끝나면 임시 파일을 남기지 않는다", async () => {

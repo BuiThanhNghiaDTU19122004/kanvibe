@@ -13,12 +13,12 @@ import {
   type CodexHooksStatus,
 } from "@/lib/codexHooksSetup";
 import {
-  buildGeminiHookFiles,
-  getGeminiHookInstallInputPaths,
-  getGeminiHooksStatus,
-  setupGeminiHooks,
-  type GeminiHooksStatus,
-} from "@/lib/geminiHooksSetup";
+  buildAntigravityHookFiles,
+  getAntigravityHookInstallInputPaths,
+  getAntigravityHooksStatus,
+  setupAntigravityHooks,
+  type AntigravityHooksStatus,
+} from "@/lib/antigravityHooksSetup";
 import {
   buildOpenCodeHookFiles,
   getOpenCodeHookInstallInputPaths,
@@ -29,11 +29,11 @@ import {
 import type { TextFileReadResult } from "@/lib/hostFileAccess";
 import type { ShellHookProviderFile } from "@/lib/shellHookProvider";
 
-export type KanvibeHookProvider = "claude" | "gemini" | "codex" | "openCode";
+export type KanvibeHookProvider = "claude" | "antigravity" | "codex" | "openCode";
 
 export type KanvibeHookStatus =
   | ClaudeHooksStatus
-  | GeminiHooksStatus
+  | AntigravityHooksStatus
   | CodexHooksStatus
   | OpenCodeHooksStatus;
 
@@ -81,19 +81,19 @@ export const KANVIBE_HOOK_PROVIDER_MODULES: Record<KanvibeHookProvider, KanvibeH
     install: setupClaudeHooks,
     getStatus: getClaudeHooksStatus,
   },
-  gemini: {
-    provider: "gemini",
-    label: "Gemini",
-    getInstallInputPaths: getGeminiHookInstallInputPaths,
-    buildFiles: (repoPath, taskId, hookServerUrl, existingFiles, sshHost) => buildGeminiHookFiles(
+  antigravity: {
+    provider: "antigravity",
+    label: "Antigravity",
+    getInstallInputPaths: getAntigravityHookInstallInputPaths,
+    buildFiles: (repoPath, taskId, hookServerUrl, existingFiles, sshHost) => buildAntigravityHookFiles(
       repoPath,
       taskId,
       hookServerUrl,
-      readExistingContent(existingFiles, getGeminiHookInstallInputPaths(repoPath, sshHost)[0]),
+      readExistingContent(existingFiles, getAntigravityHookInstallInputPaths(repoPath, sshHost)[0]),
       sshHost,
     ),
-    install: setupGeminiHooks,
-    getStatus: getGeminiHooksStatus,
+    install: setupAntigravityHooks,
+    getStatus: getAntigravityHooksStatus,
   },
   codex: {
     provider: "codex",

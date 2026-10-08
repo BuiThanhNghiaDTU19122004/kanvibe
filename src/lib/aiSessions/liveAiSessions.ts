@@ -2,7 +2,7 @@ import { filterPanesByWorktree } from "@/desktop/shared/liveAiSessions";
 import { listRunningAgentPanes } from "@/lib/aiSessions/runningAgentPanes";
 import { readClaudeLiveSessions } from "@/lib/aiSessions/readClaudeSessions";
 import { readCodexLiveSessions } from "@/lib/aiSessions/readCodexSessions";
-import { readGeminiLiveSessions } from "@/lib/aiSessions/readGeminiSessions";
+import { readAntigravityLiveSessions } from "@/lib/aiSessions/readAntigravitySessions";
 import { readOpenCodeLiveSessions } from "@/lib/aiSessions/readOpenCodeSessions";
 import type {
   AiSessionProvider,
@@ -31,7 +31,7 @@ const LIVE_SESSION_READERS: Record<
   claude: readClaudeLiveSessions,
   codex: readCodexLiveSessions,
   opencode: readOpenCodeLiveSessions,
-  gemini: readGeminiLiveSessions,
+  antigravity: readAntigravityLiveSessions,
 };
 
 const PROVIDERS = Object.keys(LIVE_SESSION_READERS) as AiSessionProvider[];

@@ -11,7 +11,7 @@ import type {
   LiveAiSessionWindows,
 } from "@/lib/aiSessions/types";
 
-/** Gemini CLI 기록에는 서브에이전트를 가리키는 필드가 없어 그래프를 만들 수 없다 */
+/** Antigravity CLI 기록에는 서브에이전트를 가리키는 필드가 없어 그래프를 만들 수 없다 */
 async function readEmptyAgentCallGraph(): Promise<AgentCallNode[]> {
   return [];
 }
@@ -27,7 +27,7 @@ const AGENT_CALL_GRAPH_READERS: Record<
   claude: readClaudeAgentCallGraph,
   codex: readCodexAgentCallGraph,
   opencode: readOpenCodeAgentCallGraph,
-  gemini: readEmptyAgentCallGraph,
+  antigravity: readEmptyAgentCallGraph,
 };
 
 /**
@@ -42,8 +42,7 @@ export async function readAgentCallGraph(
   provider: AiSessionProvider,
   sessionId: string,
 ): Promise<AgentCallGraph> {
-  const roots = await AGENT_CALL_GRAPH_READERS[provider](context, sessionId, LIVE_SESSION_WINDOWS)
-    .catch(() => [] as AgentCallNode[]);
+  const roots = await AGENT_CALL_GRAPH_READERS[provider](context, sessionId, LIVE_SESSION_WINDOWS);
 
   return {
     provider,

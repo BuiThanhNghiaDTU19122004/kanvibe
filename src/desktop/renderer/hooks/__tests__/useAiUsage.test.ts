@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { useAiUsage } from "@/desktop/renderer/hooks/useAiUsage";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+let useAiUsage: typeof import("@/desktop/renderer/hooks/useAiUsage").useAiUsage;
 import type { AiUsageSnapshot } from "@/lib/aiUsage/types";
 
 const { mockGetAiUsageSnapshot, mockGetCachedAiUsageSnapshot } = vi.hoisted(() => ({
@@ -41,8 +41,63 @@ function createPendingSnapshot(): { promise: Promise<AiUsageSnapshot>; resolve: 
 }
 
 describe("useAiUsage", () => {
+  beforeEach(async () => {
+    vi.resetModules();
+    useAiUsage = (await import("@/desktop/renderer/hooks/useAiUsage")).useAiUsage;
+  });
   afterEach(() => {
     vi.resetAllMocks();
+  });
+
+  it("shares one pending request across panels", async () => {
+    mockGetCachedAiUsageSnapshot.mockResolvedValue(null);
+    const pending = createPendingSnapshot();
+    mockGetAiUsageSnapshot.mockReturnValue(pending.promise);
+    const first = renderHook(() => useAiUsage(true));
+    const second = renderHook(() => useAiUsage(true));
+    expect(mockGetAiUsageSnapshot).toHaveBeenCalledTimes(1);
+    expect(mockGetCachedAiUsageSnapshot).toHaveBeenCalledTimes(1);
+    await act(async () => { pending.resolve(); });
+    expect(first.result.current.snapshot).toBe(second.result.current.snapshot);
+  });
+
+  it("shows the previous result immediately when remounting within the cache interval", async () => {
+    mockGetCachedAiUsageSnapshot.mockResolvedValue(null);
+    mockGetAiUsageSnapshot.mockResolvedValue(createSnapshot(22));
+    const first = renderHook(() => useAiUsage(true));
+    await waitFor(() => expect(first.result.current.snapshot).toBeTruthy());
+    first.unmount();
+    const second = renderHook(() => useAiUsage(true));
+    expect(second.result.current.snapshot?.accounts[0].windows[0].usedPercent).toBe(22);
+    expect(mockGetAiUsageSnapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes stale data on re-entry", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(100_000);
+    try {
+      mockGetCachedAiUsageSnapshot.mockResolvedValue(null);
+      mockGetAiUsageSnapshot.mockResolvedValue(createSnapshot(22));
+      const first = renderHook(() => useAiUsage(true));
+      await waitFor(() => expect(first.result.current.snapshot).toBeTruthy());
+      first.unmount();
+      now.mockReturnValue(160_001);
+      mockGetAiUsageSnapshot.mockResolvedValue(createSnapshot(80));
+      const second = renderHook(() => useAiUsage(true));
+      await waitFor(() => expect(second.result.current.snapshot?.accounts[0].windows[0].usedPercent).toBe(80));
+      expect(mockGetAiUsageSnapshot).toHaveBeenCalledTimes(2);
+    } finally { now.mockRestore(); }
+  });
+
+  it("ignores an older pending response after account changes", async () => {
+    const old = createPendingSnapshot();
+    mockGetCachedAiUsageSnapshot.mockResolvedValue(null);
+    mockGetAiUsageSnapshot.mockReturnValueOnce(old.promise).mockResolvedValue(createSnapshot(22));
+    const { result } = renderHook(() => useAiUsage(true));
+    const { invalidateAiUsage } = await import("@/desktop/renderer/hooks/useAiUsage");
+    await act(async () => { invalidateAiUsage(); });
+    expect(result.current.snapshot).toBeNull();
+    await act(async () => { old.resolve(); });
+    expect(result.current.snapshot?.accounts[0].windows[0].usedPercent).toBe(22);
   });
 
   it("새 조회를 기다리는 동안 저장된 결과를 먼저 보여준다", async () => {

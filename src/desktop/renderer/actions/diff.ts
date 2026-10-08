@@ -4,8 +4,8 @@ import type { TaskDiffStats } from "@/desktop/shared/taskDiffStats";
 
 export type { DiffFile };
 
-export function getGitDiffFiles(taskId: string): Promise<DiffFile[]> {
-  return invokeDesktop("diff", "getGitDiffFiles", taskId);
+export function getGitDiffFiles(taskId: string, strict = false): Promise<DiffFile[]> {
+  return strict ? invokeDesktop("diff", "getGitDiffFiles", taskId, true) : invokeDesktop("diff", "getGitDiffFiles", taskId);
 }
 
 /**

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-const { execFileSync, spawn } = require("node:child_process");
 const { existsSync } = require("node:fs");
 const path = require("node:path");
+const { execPnpmSync, spawnPnpm } = require("./package-runtime.cjs");
 
 const REQUIRED_NODE_MAJOR = 24;
 const RENDERER_ENTRY_PATH = path.join(process.cwd(), "build", "renderer", "index.html");
@@ -35,7 +35,7 @@ function ensureSupportedNodeVersion() {
 
 function installProjectDependencies() {
   console.warn("[kanvibe] Installing project dependencies because better-sqlite3 is missing...");
-  execFileSync("pnpm", ["install"], {
+  execPnpmSync(["install"], {
     stdio: "inherit",
     env: process.env,
   });
@@ -47,7 +47,7 @@ function ensureAppBuild() {
   }
 
   console.warn("[kanvibe] Desktop build not found. Running `pnpm build` first...");
-  execFileSync("pnpm", ["build"], {
+  execPnpmSync(["build"], {
     stdio: "inherit",
     env: process.env,
   });
@@ -62,7 +62,7 @@ function main() {
 
   ensureAppBuild();
 
-  const child = spawn("pnpm", ["exec", "electron", "--no-sandbox", "."], {
+  const child = spawnPnpm(["exec", "electron", "--no-sandbox", "."], {
     stdio: "inherit",
     env: process.env,
   });

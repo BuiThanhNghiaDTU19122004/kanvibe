@@ -2,6 +2,7 @@ import type { WebContents } from "electron";
 import {
   createProviderCliEnvironment,
   getProviderLoginCommand,
+  readProviderAuthStatus,
 } from "@/lib/aiUsage/providerCli";
 import { AI_PROVIDER_CONFIG_DIR_SPECS } from "@/lib/aiUsage/providerConfigDir";
 import type { AiLoginProvider } from "@/lib/aiUsage/loginProvider";
@@ -17,9 +18,11 @@ import { prepareLoginBrowser } from "./loginBrowser";
 interface AiAccountLoginSession {
   pty: import("node-pty").IPty;
   disposeBrowser: () => Promise<void>;
+  pollTimer?: ReturnType<typeof setTimeout>;
 }
 
 const loginSessions = new Map<string, AiAccountLoginSession>();
+const pendingLogins = new Map<string, symbol>();
 
 function buildSessionKey(webContentsId: number, accountRoot: string): string {
   return `${webContentsId}:${accountRoot}`;
@@ -27,6 +30,7 @@ function buildSessionKey(webContentsId: number, accountRoot: string): string {
 
 export interface AiAccountLoginOpenResult {
   ok: boolean;
+  authenticated?: boolean;
   error?: string;
 }
 
@@ -42,8 +46,18 @@ export async function openAiAccountLogin(
     return { ok: true };
   }
 
-  if (!["claude", "codex", "gemini", "antigravity"].includes(provider)) {
+  if (!["claude", "codex", "antigravity"].includes(provider)) {
     return { ok: false, error: "Unsupported login provider" };
+  }
+  const pendingToken = Symbol(sessionKey);
+  pendingLogins.set(sessionKey, pendingToken);
+  const isCancelled = () => pendingLogins.get(sessionKey) !== pendingToken;
+  const alreadyAuthenticated = provider === "antigravity"
+    && (await readProviderAuthStatus(provider, accountRoot).catch(() => null))?.isLoggedIn;
+  if (isCancelled()) return { ok: false, error: "Sign-in cancelled" };
+  if (alreadyAuthenticated) {
+    pendingLogins.delete(sessionKey);
+    return { ok: true, authenticated: true };
   }
   const { command, args } = getProviderLoginCommand(provider);
   const environment = provider === "antigravity" ? createLocalShellEnvironment() : createProviderCliEnvironment(
@@ -56,6 +70,10 @@ export async function openAiAccountLogin(
   try {
     disposeBrowser = await prepareLoginBrowser(environment);
     const pty = await import("node-pty");
+    if (isCancelled()) {
+      await disposeBrowser();
+      return { ok: false, error: "Sign-in cancelled" };
+    }
     ptyProcess = pty.spawn(command, args, {
       name: "xterm-color",
       cols,
@@ -64,6 +82,7 @@ export async function openAiAccountLogin(
       env: environment,
     });
   } catch (error) {
+    if (!isCancelled()) pendingLogins.delete(sessionKey);
     await disposeBrowser();
     return {
       ok: false,
@@ -71,8 +90,22 @@ export async function openAiAccountLogin(
     };
   }
 
-  const session = { pty: ptyProcess, disposeBrowser };
+  const session: AiAccountLoginSession = { pty: ptyProcess, disposeBrowser };
+  pendingLogins.delete(sessionKey);
   loginSessions.set(sessionKey, session);
+  if (provider === "antigravity") {
+    const checkLogin = async () => {
+      const status = await readProviderAuthStatus(provider, accountRoot).catch(() => null);
+      if (loginSessions.get(sessionKey) !== session) return;
+      if (status?.isLoggedIn) {
+        closeAiAccountLogin(webContents.id, accountRoot);
+        if (!webContents.isDestroyed()) webContents.send("kanvibe:ai-login-exit", { accountRoot, exitCode: 0 });
+      } else {
+        session.pollTimer = setTimeout(() => void checkLogin(), 5000);
+      }
+    };
+    session.pollTimer = setTimeout(() => void checkLogin(), 5000);
+  }
 
   ptyProcess.onData((data) => {
     if (!webContents.isDestroyed()) {
@@ -81,6 +114,7 @@ export async function openAiAccountLogin(
   });
 
   ptyProcess.onExit(({ exitCode }) => {
+    clearTimeout(session.pollTimer);
     void disposeBrowser();
     if (loginSessions.get(sessionKey) !== session) return;
     loginSessions.delete(sessionKey);
@@ -111,21 +145,27 @@ export function resizeAiAccountLogin(
 
 export function closeAiAccountLogin(webContentsId: number, accountRoot: string): void {
   const sessionKey = buildSessionKey(webContentsId, accountRoot);
+  pendingLogins.delete(sessionKey);
   const session = loginSessions.get(sessionKey);
   if (!session) {
     return;
   }
 
   loginSessions.delete(sessionKey);
+  clearTimeout(session.pollTimer);
   session.pty.kill();
   void session.disposeBrowser();
 }
 
 /** 창이 사라지면 그 창이 띄운 로그인 프로세스도 남겨 두지 않는다 */
 export function closeWindowAiAccountLogins(webContentsId: number): void {
+  for (const key of pendingLogins.keys()) {
+    if (key.startsWith(`${webContentsId}:`)) pendingLogins.delete(key);
+  }
   for (const sessionKey of [...loginSessions.keys()]) {
     if (sessionKey.startsWith(`${webContentsId}:`)) {
       const session = loginSessions.get(sessionKey);
+      clearTimeout(session?.pollTimer);
       loginSessions.delete(sessionKey);
       session?.pty.kill();
       void session?.disposeBrowser();

@@ -2,10 +2,10 @@
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 
-const { execFileSync } = require("node:child_process");
 const { mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { execPnpmSync } = require("./package-runtime.cjs");
 
 function collectTypeScriptFiles(relativeRoot, files = []) {
   const absoluteRoot = path.join(process.cwd(), relativeRoot);
@@ -62,7 +62,7 @@ function main() {
 
   try {
     writeFileSync(tempConfigPath, `${JSON.stringify(tempConfig, null, 2)}\n`);
-    execFileSync("pnpm", ["exec", "tsc", "-p", tempConfigPath], {
+    execPnpmSync(["exec", "tsc", "-p", tempConfigPath], {
       stdio: "inherit",
       env: process.env,
     });

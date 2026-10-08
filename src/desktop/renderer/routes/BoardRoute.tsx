@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import Board from "@/components/Board";
+import LoadError from "@/components/LoadError";
 import { getDoneAlertDismissed, getDefaultSessionType, getNotificationSettings, getSidebarDefaultCollapsed, getTaskSearchShortcut, getVimModeEnabled } from "@/desktop/renderer/actions/appSettings";
 import { getTasksByStatus } from "@/desktop/renderer/actions/kanban";
 import { getAllProjects, getAvailableHosts } from "@/desktop/renderer/actions/project";
 import { buildRouteCacheKey, readRouteCache, writeRouteCache } from "@/desktop/renderer/utils/routeCache";
 import { useRefreshSignal } from "@/desktop/renderer/utils/refresh";
 import { consumeBoardFocusTask } from "@/desktop/renderer/utils/boardFocusTarget";
-import { DEFAULT_TASK_SEARCH_SHORTCUT } from "@/desktop/renderer/utils/keyboardShortcut";
 import { INITIAL_DESKTOP_LOAD_TIMEOUT_MS, logDesktopInitialLoadTimeout } from "@/desktop/renderer/utils/loadingTimeout";
-import { SessionType, TaskStatus } from "@/entities/KanbanTask";
 
 interface BoardData {
   tasks: Awaited<ReturnType<typeof getTasksByStatus>>;
@@ -35,30 +34,6 @@ const BOARD_SKELETON_STATUS_DOT_CLASSES = [
   "bg-status-review",
   "bg-status-done",
 ];
-
-function createEmptyBoardData(): BoardData {
-  return {
-    tasks: {
-      tasks: {
-        [TaskStatus.TODO]: [],
-        [TaskStatus.PROGRESS]: [],
-        [TaskStatus.PENDING]: [],
-        [TaskStatus.REVIEW]: [],
-        [TaskStatus.DONE]: [],
-      },
-      doneTotal: 0,
-      doneLimit: 20,
-    },
-    sshHosts: [],
-    projects: [],
-    sidebarDefaultCollapsed: false,
-    doneAlertDismissed: false,
-    notificationSettings: { isEnabled: true, enabledStatuses: ["progress", "pending", "review"] },
-    defaultSessionType: SessionType.TMUX,
-    taskSearchShortcut: DEFAULT_TASK_SEARCH_SHORTCUT,
-    vimModeEnabled: true,
-  };
-}
 
 function BoardTaskCardSkeleton({ index }: { index: number }) {
   return (
@@ -123,6 +98,9 @@ export default function BoardRoute() {
   const refreshSignal = useRefreshSignal(["all", "board"]);
   const [data, setData] = useState<BoardData | null>(() => readRouteCache<BoardData>(BOARD_ROUTE_CACHE_KEY));
   const [initialFocusTaskId] = useState(() => consumeBoardFocusTask());
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const retry = () => { setLoadFailed(false); setRetryKey((key) => key + 1); };
 
   useEffect(() => {
     document.title = "";
@@ -133,7 +111,7 @@ export default function BoardRoute() {
     const loadingTimeout = window.setTimeout(() => {
       if (!cancelled) {
         logDesktopInitialLoadTimeout("board");
-        setData((currentData) => currentData ?? createEmptyBoardData());
+        setLoadFailed(true);
       }
     }, INITIAL_DESKTOP_LOAD_TIMEOUT_MS);
 
@@ -164,12 +142,13 @@ export default function BoardRoute() {
 
         writeRouteCache(BOARD_ROUTE_CACHE_KEY, nextData);
         setData(nextData);
+        setLoadFailed(false);
       }
     }).catch((error) => {
       window.clearTimeout(loadingTimeout);
       console.error("Failed to load board route data:", error);
       if (!cancelled) {
-        setData((currentData) => currentData ?? createEmptyBoardData());
+        setLoadFailed(true);
       }
     });
 
@@ -177,13 +156,15 @@ export default function BoardRoute() {
       cancelled = true;
       window.clearTimeout(loadingTimeout);
     };
-  }, [refreshSignal]);
+  }, [refreshSignal, retryKey]);
 
   if (!data) {
-    return <BoardRouteSkeleton />;
+    return loadFailed ? <LoadError onRetry={retry} /> : <BoardRouteSkeleton />;
   }
 
   return (
+    <>
+    {loadFailed && <LoadError inline onRetry={retry} />}
     <Board
       initialTasks={data.tasks.tasks}
       initialDoneTotal={data.tasks.doneTotal}
@@ -198,5 +179,6 @@ export default function BoardRoute() {
       taskSearchShortcut={data.taskSearchShortcut}
       vimModeEnabled={data.vimModeEnabled ?? true}
     />
+    </>
   );
 }

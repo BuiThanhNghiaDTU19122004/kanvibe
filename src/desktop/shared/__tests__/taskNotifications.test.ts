@@ -7,6 +7,11 @@ import {
 } from "@/desktop/shared/taskNotifications";
 
 describe("taskNotifications", () => {
+  it("supports Vietnamese notification messages and localized routes", () => {
+    expect(getNotificationLocale("vi-VN")).toBe("vi");
+    const notification = buildHookStatusTargetMissingNotification({ taskId: "missing", requestedStatus: "review", reason: "task-not-found", locale: "vi" });
+    expect(notification.desktopPayload.body).toContain("Không");
+  });
   it("알 수 없는 locale은 한국어 메시지로 fallback한다", () => {
     // Given
 

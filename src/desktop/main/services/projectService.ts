@@ -5,13 +5,15 @@ import { KanbanTask, TaskStatus, SessionType } from "@/entities/KanbanTask";
 import { IsNull } from "typeorm";
 import { isSessionAlive, formatProjectBranchSessionName, createSessionWithoutWorktree } from "@/lib/worktree";
 import { getClaudeHooksStatus, type ClaudeHooksStatus } from "@/lib/claudeHooksSetup";
-import { getGeminiHooksStatus, type GeminiHooksStatus } from "@/lib/geminiHooksSetup";
+import { getAntigravityHooksStatus, type AntigravityHooksStatus } from "@/lib/antigravityHooksSetup";
 import { getCodexHooksStatus, type CodexHooksStatus } from "@/lib/codexHooksSetup";
 import { getOpenCodeHooksStatus, type OpenCodeHooksStatus } from "@/lib/openCodeHooksSetup";
 import { aggregateAiSessions, getAiSessionDetail } from "@/lib/aiSessions/aggregateAiSessions";
 import { readAgentCallGraph } from "@/lib/aiSessions/agentCallGraph";
 import { readLiveAiSessions } from "@/lib/aiSessions/liveAiSessions";
 import { listRunningAgentPanes } from "@/lib/aiSessions/runningAgentPanes";
+import { readNativeAgentMonitor } from "@/lib/nativeAgentRuntime";
+import type { AgentMonitor } from "@/desktop/shared/agentRuntime";
 import type {
   AgentCallGraph,
   AggregatedAiSessionDetail,
@@ -22,6 +24,7 @@ import type {
   RunningAgentPane,
 } from "@/lib/aiSessions/types";
 import { homedir } from "os";
+import { listLocalDirectories } from "@/lib/localDirectories";
 import path from "path";
 import { computeProjectColor } from "@/lib/projectColor";
 import { DUPLICATE_PROJECT_NAME_ERROR, resolveUniqueProjectName } from "@/lib/projectName";
@@ -285,15 +288,15 @@ async function getProjectRootTask(projectId: string, defaultBranch: string) {
 }
 
 async function areProjectRootHooksInstalled(project: Project, taskId: string): Promise<boolean> {
-  const [claudeStatus, geminiStatus, codexStatus, openCodeStatus] = await Promise.all([
+  const [claudeStatus, antigravityStatus, codexStatus, openCodeStatus] = await Promise.all([
     getClaudeHooksStatus(project.repoPath, taskId, project.sshHost),
-    getGeminiHooksStatus(project.repoPath, taskId, project.sshHost),
+    getAntigravityHooksStatus(project.repoPath, taskId, project.sshHost),
     getCodexHooksStatus(project.repoPath, taskId, project.sshHost),
     getOpenCodeHooksStatus(project.repoPath, taskId, project.sshHost),
   ]);
 
   return claudeStatus.installed
-    && geminiStatus.installed
+    && antigravityStatus.installed
     && codexStatus.installed
     && openCodeStatus.installed;
 }
@@ -1029,6 +1032,7 @@ export async function listSubdirectories(
   parentPath: string,
   sshHost?: string
 ): Promise<string[]> {
+  if (!sshHost && process.platform === "win32") return listLocalDirectories(parentPath);
   const resolvedPath = resolveDirectorySearchPath(parentPath, sshHost);
   const command = `find ${resolvedPath} -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort`;
 
@@ -1137,22 +1141,22 @@ export async function installTaskHooks(
   }
 }
 
-/** 프로젝트의 Gemini CLI hooks 설치 상태를 조회한다 */
-export async function getProjectGeminiHooksStatus(
+/** 프로젝트의 Antigravity CLI hooks 설치 상태를 조회한다 */
+export async function getProjectAntigravityHooksStatus(
   projectId: string
-): Promise<GeminiHooksStatus | null> {
+): Promise<AntigravityHooksStatus | null> {
   const repo = await getProjectRepository();
   const project = await repo.findOneBy({ id: projectId });
   if (!project) return null;
 
   const { task } = await ensureProjectRootTask(project);
-  return getGeminiHooksStatus(project.repoPath, task?.id, project.sshHost);
+  return getAntigravityHooksStatus(project.repoPath, task?.id, project.sshHost);
 }
 
-/** 프로젝트에 Gemini CLI hooks를 설치한다 */
-export async function installProjectGeminiHooks(
+/** 프로젝트에 Antigravity CLI hooks를 설치한다 */
+export async function installProjectAntigravityHooks(
   projectId: string
-): Promise<{ success: boolean; error?: string; status?: GeminiHooksStatus | null }> {
+): Promise<{ success: boolean; error?: string; status?: AntigravityHooksStatus | null }> {
   const repo = await getProjectRepository();
   const project = await repo.findOneBy({ id: projectId });
   if (!project) return { success: false, error: "프로젝트를 찾을 수 없습니다." };
@@ -1161,8 +1165,8 @@ export async function installProjectGeminiHooks(
   if (!task) return { success: false, error: "기본 브랜치 태스크를 찾을 수 없습니다." };
 
   try {
-    await installKanvibeHookProvider(project.repoPath, task.id, "gemini", project.sshHost);
-    return { success: true, status: await getGeminiHooksStatus(project.repoPath, task.id, project.sshHost) };
+    await installKanvibeHookProvider(project.repoPath, task.id, "antigravity", project.sshHost);
+    return { success: true, status: await getAntigravityHooksStatus(project.repoPath, task.id, project.sshHost) };
   } catch (error) {
     return {
       success: false,
@@ -1171,10 +1175,10 @@ export async function installProjectGeminiHooks(
   }
 }
 
-/** 태스크의 worktree 또는 프로젝트 경로에서 Gemini CLI hooks 상태를 조회한다 */
-export async function getTaskGeminiHooksStatus(
+/** 태스크의 worktree 또는 프로젝트 경로에서 Antigravity CLI hooks 상태를 조회한다 */
+export async function getTaskAntigravityHooksStatus(
   taskId: string
-): Promise<GeminiHooksStatus | null> {
+): Promise<AntigravityHooksStatus | null> {
   const taskRepo = await getTaskRepository();
   const task = await taskRepo.findOne({ where: { id: taskId }, relations: ["project"] });
   if (!task?.project) return null;
@@ -1182,13 +1186,13 @@ export async function getTaskGeminiHooksStatus(
   const hookTarget = await resolveTaskHookTarget(task);
   if (!hookTarget) return null;
 
-  return getGeminiHooksStatus(hookTarget.targetPath, hookTarget.taskId, hookTarget.sshHost);
+  return getAntigravityHooksStatus(hookTarget.targetPath, hookTarget.taskId, hookTarget.sshHost);
 }
 
-/** 태스크의 worktree 또는 프로젝트 경로에 Gemini CLI hooks를 설치한다 */
-export async function installTaskGeminiHooks(
+/** 태스크의 worktree 또는 프로젝트 경로에 Antigravity CLI hooks를 설치한다 */
+export async function installTaskAntigravityHooks(
   taskId: string
-): Promise<{ success: boolean; error?: string; status?: GeminiHooksStatus | null }> {
+): Promise<{ success: boolean; error?: string; status?: AntigravityHooksStatus | null }> {
   const taskRepo = await getTaskRepository();
   const task = await taskRepo.findOne({ where: { id: taskId }, relations: ["project"] });
   if (!task?.project) return { success: false, error: "프로젝트를 찾을 수 없습니다." };
@@ -1199,8 +1203,8 @@ export async function installTaskGeminiHooks(
       return { success: false, error: "프로젝트를 찾을 수 없습니다." };
     }
 
-    await installKanvibeHookProvider(hookTarget.targetPath, hookTarget.taskId, "gemini", hookTarget.sshHost);
-    return { success: true, status: await getGeminiHooksStatus(hookTarget.targetPath, hookTarget.taskId, hookTarget.sshHost) };
+    await installKanvibeHookProvider(hookTarget.targetPath, hookTarget.taskId, "antigravity", hookTarget.sshHost);
+    return { success: true, status: await getAntigravityHooksStatus(hookTarget.targetPath, hookTarget.taskId, hookTarget.sshHost) };
   } catch (error) {
     return {
       success: false,
@@ -1436,7 +1440,7 @@ export async function getTaskLiveAiSessions(taskId: string): Promise<LiveAiSessi
       worktreePath: task.worktreePath || task.project.repoPath,
       repoPath: task.project.repoPath,
       sshHost: task.project.sshHost,
-    }),
+    }, !task.project.sshHost && process.platform === "win32" ? (await readNativeAgentMonitor()).panes : undefined),
   };
 }
 
@@ -1445,7 +1449,12 @@ export async function getTaskLiveAiSessions(taskId: string): Promise<LiveAiSessi
  * 카드마다 세션 파일을 뒤지면 보드 전체 폴링이 비싸지므로, 여기서는 tmux pane 조회 한 번으로 끝낸다.
  */
 export async function getRunningAgentPanes(): Promise<RunningAgentPane[]> {
-  return listRunningAgentPanes();
+  return process.platform === "win32" ? (await readNativeAgentMonitor()).panes : listRunningAgentPanes();
+}
+
+export async function getAgentMonitor(): Promise<AgentMonitor> {
+  if (process.platform === "win32") return readNativeAgentMonitor();
+  return { panes: await listRunningAgentPanes(), runtimes: [], readAt: new Date().toISOString() };
 }
 
 /**

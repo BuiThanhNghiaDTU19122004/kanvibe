@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtemp, readFile, rm, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+import { spawnSync } from "child_process";
 import {
   setupCodexHooks,
   getCodexHooksStatus,
@@ -91,7 +92,40 @@ describe("codexHooksSetup", () => {
       expect(updated).toContain('kanvibe-permission-hook.sh');
       expect(updated).toContain('kanvibe-pre-tool-hook.sh');
       expect(updated).toContain('kanvibe-stop-hook.sh');
+      const hooks = JSON.parse(updated).hooks;
+      expect(hooks.UserPromptSubmit[0].hooks[0].commandWindows).toContain("('progress')");
+      expect(hooks.PermissionRequest[0].hooks[0].commandWindows).toContain("('pending')");
+      expect(hooks.PreToolUse[0].hooks[0].commandWindows).toContain("('progress')");
+      expect(hooks.Stop[0].hooks[0].commandWindows).toContain("('review')");
     });
+  });
+
+  it.skipIf(process.platform !== "win32")("runs Windows hook commands from a repo subdirectory", async () => {
+    const initialized = spawnSync("git", ["init", "-q", tempDir]);
+    expect(initialized.status).toBe(0);
+    await setupCodexHooks(tempDir, "task-1", "http://localhost:1");
+    const scriptPath = join(tempDir, ".codex", "hooks", "kanvibe-windows-hook.cjs");
+    const syntax = spawnSync("node", ["--check", scriptPath], { encoding: "utf-8" });
+    expect(syntax.status, syntax.stderr).toBe(0);
+    const subdirectory = join(tempDir, "nested");
+    await mkdir(subdirectory);
+    const hooks = JSON.parse(await readFile(join(tempDir, ".codex", "hooks.json"), "utf-8")).hooks;
+
+    for (const [event, expectedStatus] of [
+      ["UserPromptSubmit", "progress"],
+      ["PermissionRequest", "pending"],
+      ["PreToolUse", "progress"],
+      ["Stop", "review"],
+    ]) {
+      const command = hooks[event][0].hooks[0].commandWindows;
+      const result = spawnSync(command, { cwd: subdirectory, encoding: "utf-8", shell: true });
+      expect(result.status, `${command}\n${result.stdout}\n${result.stderr}`).toBe(0);
+      expect(result.stderr).toBe("");
+      const statePath = join(tempDir, ".kanvibe", "status.json");
+      expect(await readFile(statePath, "utf-8").catch(() => null), `${command}\n${result.stdout}\n${result.stderr}`).not.toBeNull();
+      const state = JSON.parse(await readFile(statePath, "utf-8"));
+      expect(state.status).toBe(expectedStatus);
+    }
   });
 
   describe("setupCodexHooks - file operations", () => {
@@ -229,6 +263,7 @@ describe("codexHooksSetup", () => {
         hasHooksFile: true,
         hasHookEntries: true,
         hasConfigEntry: true,
+        hasWindowsHook: true,
         hasTaskIdBinding: true,
         hasRegisteredHookTarget: true,
         hasStatusMappings: true,

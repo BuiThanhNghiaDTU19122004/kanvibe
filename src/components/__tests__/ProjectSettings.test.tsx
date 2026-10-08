@@ -6,6 +6,8 @@ import { SessionType } from "@/entities/KanbanTask";
 import type { Project } from "@/entities/Project";
 import enMessages from "../../../messages/en.json";
 
+vi.mock("../LanguageSelector", () => ({ default: () => null }));
+
 const mockSetDefaultSessionType = vi.fn().mockResolvedValue(undefined);
 const mockSetNotificationEnabled = vi.fn().mockResolvedValue(undefined);
 const mockSetNotificationStatuses = vi.fn().mockResolvedValue(undefined);
@@ -179,29 +181,18 @@ describe("ProjectSettings", () => {
     });
   });
 
-  it("mac 데스크톱 페이지에서는 Board 링크를 titlebar 버튼 아래로 내린다", async () => {
-    window.kanvibeDesktop = { isDesktop: true };
-    Object.defineProperty(window.navigator, "platform", {
-      configurable: true,
-      value: "MacIntel",
-    });
-
+  it("a settings page renders only its selected section", () => {
     const { container } = render(
-      <ProjectSettings
-        variant="page"
-        projects={[createProject()]}
-        sshHosts={[]}
-        sidebarDefaultCollapsed={false}
-        defaultSessionType={SessionType.TMUX}
-        notificationSettings={{ isEnabled: true, enabledStatuses: ["progress", "pending", "review"] }}
-        backgroundSyncSettings={{ isEnabled: true, intervalMs: 10 * 60_000 }}
-      />,
+      <ProjectSettings variant="page" section="notifications"
+        sidebarDefaultCollapsed={false} defaultSessionType={SessionType.TMUX}
+        notificationSettings={{ isEnabled: true, enabledStatuses: ["progress"] }}
+        backgroundSyncSettings={{ isEnabled: true, intervalMs: 600_000 }} />,
     );
-
-    await waitFor(() => {
-      expect(container.querySelector("aside")?.className).toContain("pt-16");
-      expect(screen.getByText("Board").closest("a")?.className).toContain("gap-3");
-    });
+    expect(container.querySelector("#notifications")).toBeTruthy();
+    for (const id of ["appearance", "detail", "creation", "background-sync", "keyboard"]) {
+      expect(container.querySelector(`#${id}`)).toBeNull();
+    }
+    expect(screen.queryByText("aiAccountsLink")).toBeNull();
   });
 
   it("Escape를 누르면 설정 패널을 닫는다", () => {

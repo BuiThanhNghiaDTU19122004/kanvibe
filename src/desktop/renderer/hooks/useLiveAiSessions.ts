@@ -1,10 +1,12 @@
 import { useCallback } from "react";
 import {
   getRunningAgentPanes,
+  getAgentMonitor,
   getTaskAgentCallGraph,
   getTaskLiveAiSessions,
 } from "@/desktop/renderer/actions/project";
-import { usePolledValue } from "@/desktop/renderer/hooks/usePolledValue";
+import { usePolledValue, usePolledResource } from "@/desktop/renderer/hooks/usePolledValue";
+import type { AgentMonitor } from "@/desktop/shared/agentRuntime";
 import type { AgentCallGraph, LiveAiSession, RunningAgentPane } from "@/lib/aiSessions/types";
 
 /** 세션 패널은 서브태스크가 뜨고 지는 것을 눈으로 따라갈 수 있어야 해서 짧게 돈다 */
@@ -15,6 +17,12 @@ const RUNNING_PANE_POLL_INTERVAL_MS = 5_000;
 
 const EMPTY_SESSIONS: LiveAiSession[] = [];
 const EMPTY_PANES: RunningAgentPane[] = [];
+const EMPTY_MONITOR: AgentMonitor = { panes: [], runtimes: [], readAt: "" };
+
+export function useAgentMonitor(isEnabled: boolean) {
+  const read = useCallback(() => getAgentMonitor(), []);
+  return usePolledResource(read, EMPTY_MONITOR, RUNNING_PANE_POLL_INTERVAL_MS, isEnabled);
+}
 
 /** 태스크 하나의 실행중 세션과 서브태스크. 패널이 열려 있는 동안에만 폴링한다 */
 export function useTaskLiveAiSessions(taskId: string | null, isEnabled: boolean): LiveAiSession[] {

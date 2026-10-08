@@ -12,7 +12,7 @@ const { createDesktopDiagnostics, resolveDesktopLogPath, serializeErrorForLog } 
 const { applyAppDataDirectoryOverride } = require("./runtimeEnvironment");
 const { acquireSingleInstance } = require("./singleInstance");
 
-const DEFAULT_LOCALE = "ko";
+const DEFAULT_LOCALE = "en";
 const RENDERER_DEV_URL = process.env.KANVIBE_RENDERER_URL || null;
 const SHOULD_USE_SOURCE_MODULES = Boolean(RENDERER_DEV_URL);
 const HOOK_SERVER_HOST = "0.0.0.0";
@@ -323,7 +323,7 @@ function getRendererEntryPath() {
 }
 
 function getDefaultRoute() {
-  return `/${DEFAULT_LOCALE}`;
+  return "/";
 }
 
 function isTaskDetailRouteUrl(url) {
@@ -381,7 +381,21 @@ async function didRendererRecoverFromLoadAbort(browserWindow, targetUrl) {
   return false;
 }
 
+const TITLE_BAR_OVERLAY_THEMES = {
+  dark: { color: "#090a0d", symbolColor: "#9ca3af" },
+  light: { color: "#f7f8fa", symbolColor: "#5f636d" },
+  dracula: { color: "#282a36", symbolColor: "#f8f8f2" },
+  "one-dark": { color: "#21252b", symbolColor: "#abb2bf" },
+  "catppuccin-mocha": { color: "#181825", symbolColor: "#cdd6f4" },
+};
+const TITLE_BAR_OVERLAY_HEIGHT = 32;
+
 function getTitleBarOptions() {
+  // Let WSLg's window manager own window decorations and maximize controls.
+  if (process.platform === "linux" && (process.env.WSL_DISTRO_NAME || process.env.WSL_INTEROP)) {
+    return { frame: true, titleBarStyle: "default" };
+  }
+
   if (process.platform === "darwin") {
     return {
       titleBarStyle: "hiddenInset",
@@ -391,9 +405,8 @@ function getTitleBarOptions() {
   return {
     titleBarStyle: "hidden",
     titleBarOverlay: {
-      color: "#ffffff",
-      symbolColor: "#111827",
-      height: 40,
+      ...TITLE_BAR_OVERLAY_THEMES.dark,
+      height: TITLE_BAR_OVERLAY_HEIGHT,
     },
   };
 }
@@ -402,8 +415,9 @@ function createBrowserWindowOptions() {
   return {
     width: 1600,
     height: 1000,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#090a0d",
     autoHideMenuBar: true,
+    ...(process.platform === "win32" ? { icon: path.join(app.getAppPath(), "resources", "kanvibe-windows.ico") } : {}),
     ...getTitleBarOptions(),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -425,6 +439,14 @@ function normalizeNotificationLocale(locale) {
 
   if (locale.startsWith("zh")) {
     return "zh";
+  }
+
+  if (locale.startsWith("ko")) {
+    return "ko";
+  }
+
+  if (locale.startsWith("vi")) {
+    return "vi";
   }
 
   return DEFAULT_LOCALE;
@@ -480,6 +502,18 @@ function registerAppWindow(browserWindow) {
   mainWindow = browserWindow;
   attachWindowHandlers(browserWindow);
   attachRendererDiagnostics(browserWindow);
+
+  for (const eventName of ["maximize", "unmaximize", "enter-full-screen", "leave-full-screen", "unresponsive", "responsive"]) {
+    browserWindow.on(eventName, () => {
+      if (browserWindow.isDestroyed()) return;
+      logDiagnostic(`window:${eventName}`, {
+        windowId: browserWindow.id,
+        bounds: browserWindow.getBounds(),
+        maximized: browserWindow.isMaximized(),
+        fullscreen: browserWindow.isFullScreen(),
+      });
+    });
+  }
 
   browserWindow.on("focus", () => {
     if (!browserWindow.isDestroyed()) {
@@ -847,6 +881,7 @@ function registerDesktopHandlers() {
   const { desktopServices } = require(getRuntimeModulePath(path.join("src", "desktop", "main", "serviceRegistry.ts")));
   const {
     openTerminal,
+    launchAgent,
     writeTerminal,
     resizeTerminal,
     focusTerminal,
@@ -934,6 +969,9 @@ function registerDesktopHandlers() {
   ipcMain.on("kanvibe:terminal-write", (event, taskId, tabId, data) => {
     writeTerminal(event.sender.id, taskId, tabId, data);
   });
+  ipcMain.handle("kanvibe:agent-launch", (event, taskId, tabId) => {
+    return launchAgent(event.sender.id, taskId, tabId);
+  });
 
   ipcMain.on("kanvibe:terminal-resize", (event, taskId, tabId, cols, rows) => {
     resizeTerminal(event.sender.id, taskId, tabId, cols, rows);
@@ -949,6 +987,23 @@ function registerDesktopHandlers() {
 
   ipcMain.handle("kanvibe:terminal-paste-image", async (_event, taskId, imageDataUrl) => {
     return pasteImageToRemoteTerminal(taskId, imageDataUrl);
+  });
+
+  ipcMain.on("kanvibe:update-title-bar-overlay", (_event, resolvedTheme) => {
+    if (process.platform === "darwin" || (process.platform === "linux" && (process.env.WSL_DISTRO_NAME || process.env.WSL_INTEROP))) {
+      return;
+    }
+
+    const themeColors = TITLE_BAR_OVERLAY_THEMES[resolvedTheme] || TITLE_BAR_OVERLAY_THEMES.dark;
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        try {
+          window.setTitleBarOverlay({ ...themeColors, height: TITLE_BAR_OVERLAY_HEIGHT });
+        } catch {
+          // setTitleBarOverlay may not be available on all platforms.
+        }
+      }
+    }
   });
 
   /**

@@ -1,5 +1,5 @@
 /**
- * Claude Code / Gemini CLI / Codex CLI가 공통으로 사용하는 JSON hook 설정 파일 조작 유틸리티.
+ * Claude Code / Codex CLI가 공통으로 사용하는 JSON hook 설정 파일 조작 유틸리티.
  * 세 CLI 모두 `{ hooks: { <이벤트>: [ { matcher?, hooks: [{ type, command, timeout }] } ] } }`
  * 구조를 사용하므로 파싱·upsert·검증 규칙을 한 곳에서 관리한다.
  */
@@ -7,6 +7,7 @@
 export interface CommandHookConfig {
   type: string;
   command: string;
+  commandWindows?: string;
   timeout: number;
 }
 

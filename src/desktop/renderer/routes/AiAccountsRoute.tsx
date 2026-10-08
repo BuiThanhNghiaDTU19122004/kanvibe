@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AiProviderIcon } from "@/components/AiProviderIcon";
-import AiAccountLoginTerminal from "@/desktop/renderer/components/AiAccountLoginTerminal";
+import LoadError from "@/components/LoadError";
+import { invalidateAiUsage } from "@/desktop/renderer/hooks/useAiUsage";
 import AiUsagePanel from "@/desktop/renderer/components/AiUsagePanel";
-import { Link } from "@/desktop/renderer/navigation";
 import {
   addAiAccount,
   listAiAccounts,
@@ -13,7 +13,29 @@ import type { AiAccountSummary } from "@/desktop/main/services/aiAccountService"
 import type { AiUsageProvider } from "@/lib/aiUsage/types";
 import type { AiLoginProvider } from "@/lib/aiUsage/loginProvider";
 
-const AI_USAGE_PROVIDERS: AiUsageProvider[] = ["claude", "codex", "gemini"];
+const AiAccountLoginTerminal = lazy(() => import("@/desktop/renderer/components/AiAccountLoginTerminal"));
+
+const ACCOUNT_CACHE_DURATION_MS = 60_000;
+
+// Keep account checks off the navigation path and deduplicate concurrent opens.
+let cachedAccounts: AiAccountSummary[] | null = null;
+let accountsFetchedAt = 0;
+let accountsRequest: Promise<AiAccountSummary[]> | null = null;
+
+async function readAccounts(force: boolean) {
+  if (force && accountsRequest) await accountsRequest.catch(() => undefined);
+  if (!force && cachedAccounts && Date.now() - accountsFetchedAt < ACCOUNT_CACHE_DURATION_MS) return cachedAccounts;
+  if (!accountsRequest) {
+    accountsRequest = listAiAccounts().then((accounts) => {
+      cachedAccounts = accounts;
+      accountsFetchedAt = Date.now();
+      return accounts;
+    }).finally(() => { accountsRequest = null; });
+  }
+  return accountsRequest;
+}
+
+const AI_USAGE_PROVIDERS: AiUsageProvider[] = ["claude", "codex", "antigravity"];
 
 /** 로그인 화면이 열려 있는 계정. 계정 루트가 세션을 가리킨다 */
 interface ActiveLoginSession {
@@ -77,7 +99,7 @@ function AccountRow({
         className="shrink-0 rounded-md bg-brand-primary px-2 py-1 text-[11px] text-white transition-colors hover:bg-brand-hover disabled:opacity-50"
         data-testid="ai-account-login"
       >
-        {account.isLoggedIn ? t("relogin") : t("login")}
+        {account.isLoggedIn ? t(account.provider === "antigravity" ? "checkConnection" : "relogin") : t("login")}
       </button>
 
       {account.isRemovable ? (
@@ -104,8 +126,12 @@ function AddAccountForm({
   const t = useTranslations("aiAccounts");
   const [accountName, setAccountName] = useState("");
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
 
   async function submitAccountName() {
+    if (isAdding) return;
+    setIsAdding(true);
+    try {
     const result = await addAiAccount(provider, accountName.trim());
     if (result.outcome !== "ok" || !result.accountRoot) {
       setErrorKey(result.outcome);
@@ -115,6 +141,8 @@ function AddAccountForm({
     setErrorKey(null);
     setAccountName("");
     onAdded(result.accountRoot);
+    } catch { setErrorKey("operationFailed"); }
+    finally { setIsAdding(false); }
   }
 
   return (
@@ -131,7 +159,7 @@ function AddAccountForm({
         <button
           type="button"
           onClick={() => void submitAccountName()}
-          disabled={!accountName.trim()}
+          disabled={isAdding || !accountName.trim()}
           className="shrink-0 rounded-md border border-border-default px-2 py-1 text-[11px] text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
           data-testid="ai-account-add"
         >
@@ -147,29 +175,49 @@ function AddAccountForm({
 
 export default function AiAccountsRoute() {
   const t = useTranslations("aiAccounts");
-  const [accounts, setAccounts] = useState<AiAccountSummary[] | null>(null);
+  const [accounts, setAccounts] = useState<AiAccountSummary[] | null>(() => cachedAccounts);
   const [activeLogin, setActiveLogin] = useState<ActiveLoginSession | null>(null);
+  const tc = useTranslations("common");
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [operationFailed, setOperationFailed] = useState(false);
+  const loginDialogRef = useRef<HTMLDialogElement>(null);
 
-  const loadAccounts = useCallback(async () => {
+  const mountedRef = useRef(false);
+  const loadIdRef = useRef(0);
+  const loadAccounts = useCallback(async (force = false) => {
+    const loadId = ++loadIdRef.current;
     try {
-      setAccounts(await listAiAccounts());
+      const nextAccounts = await readAccounts(force);
+      if (mountedRef.current && loadId === loadIdRef.current) {
+        setAccounts(nextAccounts);
+        setLoadFailed(false);
+      }
     } catch (error) {
       console.error("Failed to load AI accounts:", error);
-      setAccounts((currentAccounts) => currentAccounts ?? []);
+      if (mountedRef.current && loadId === loadIdRef.current) setLoadFailed(true);
     }
   }, []);
 
   useEffect(() => {
-    document.title = "AI Accounts";
-  }, []);
+    document.title = t("title");
+  }, [t]);
 
   useEffect(() => {
+    mountedRef.current = true;
     void loadAccounts();
+    return () => { mountedRef.current = false; };
   }, [loadAccounts]);
+
+  useEffect(() => {
+    if (activeLogin) {
+      loginDialogRef.current?.showModal();
+    }
+  }, [activeLogin]);
 
   const finishLogin = useCallback(() => {
     setActiveLogin(null);
-    void loadAccounts();
+    invalidateAiUsage();
+    void loadAccounts(true);
   }, [loadAccounts]);
 
   async function removeAccount(account: AiAccountSummary) {
@@ -177,35 +225,34 @@ export default function AiAccountsRoute() {
       return;
     }
 
-    await removeAiAccount(account.provider, account.accountRoot);
-    await loadAccounts();
-  }
-
-  if (!accounts) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-bg-page text-text-muted">
-        Loading...
-      </div>
-    );
+    setOperationFailed(false);
+    try { await removeAiAccount(account.provider, account.accountRoot); invalidateAiUsage(); await loadAccounts(true); }
+    catch { setOperationFailed(true); }
   }
 
   return (
-    <div className="min-h-screen bg-bg-page p-6" data-testid="ai-accounts-route">
-      <div className="mx-auto max-w-2xl space-y-8">
+    <div className="w-full" data-testid="ai-accounts-route">
+      <div className="space-y-6">
+        {loadFailed && <LoadError inline onRetry={() => { void loadAccounts(true); }} />}
+        {operationFailed && <p role="alert" className="text-sm text-status-error">{t("errors.operationFailed")}</p>}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-text-primary">{t("title")}</h1>
             <p className="mt-1 text-sm text-text-secondary">{t("description")}</p>
           </div>
-          <Link href="/settings" className="text-sm text-brand-primary hover:underline">
-            {t("backToSettings")}
-          </Link>
         </div>
 
         {activeLogin ? (
-          <section className="rounded-xl border border-border-default bg-bg-surface p-5">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-text-primary">{t("loginInProgress")}</h2>
+          <dialog
+            ref={loginDialogRef}
+            aria-labelledby="ai-account-login-title"
+            aria-describedby="ai-account-login-hint"
+            className="fixed inset-0 m-auto h-[min(640px,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-3xl flex-col overflow-hidden rounded-xl border border-border-default bg-bg-surface p-3 backdrop:bg-black/50 open:flex sm:p-5"
+            // Escape belongs to the CLI; only the Close button should end sign-in.
+            onCancel={(event) => event.preventDefault()}
+          >
+            <div className="mb-2 flex shrink-0 items-center justify-between">
+              <h2 id="ai-account-login-title" className="text-sm font-semibold text-text-primary">{t("loginInProgress")}</h2>
               <button
                 type="button"
                 onClick={finishLogin}
@@ -215,78 +262,72 @@ export default function AiAccountsRoute() {
                 {t("closeLogin")}
               </button>
             </div>
-            <p className="mb-3 text-xs text-text-muted">{t("loginHint")}</p>
-            <AiAccountLoginTerminal
-              provider={activeLogin.provider}
-              accountRoot={activeLogin.accountRoot}
-              onExit={finishLogin}
-            />
-          </section>
+            <p id="ai-account-login-hint" className="mb-3 shrink-0 text-xs text-text-muted">{t("loginHint")}</p>
+            <Suspense fallback={<p className="text-sm text-text-muted">{tc("loading")}</p>}>
+              <AiAccountLoginTerminal
+                provider={activeLogin.provider}
+                accountRoot={activeLogin.accountRoot}
+                onExit={finishLogin}
+              />
+            </Suspense>
+          </dialog>
         ) : null}
 
         <section className="rounded-xl border border-border-default bg-bg-surface p-5">
           <h2 className="mb-3 text-sm font-semibold text-text-primary">{t("usageSection")}</h2>
           {/* 구독과 남은 사용량을 한 화면에서 보려면 사용량 패널을 그대로 세우는 편이 낫다 */}
-          <AiUsagePanel isOpen />
+          <AiUsagePanel isOpen layout="grid" />
         </section>
 
-        <section className="rounded-xl border border-border-default bg-bg-surface p-5" data-testid="ai-accounts-provider-antigravity">
-          <h2 className="text-sm font-semibold text-text-primary">Google Antigravity</h2>
-          <p className="my-3 text-xs text-text-muted">
-            Sign in with Google using Antigravity CLI. Your account and model quotas are managed in the CLI; use /usage to view quotas and /logout to switch accounts.
-          </p>
-          <button
-            type="button"
-            className="rounded-md bg-brand-primary px-3 py-1 text-xs text-white disabled:opacity-50"
-            disabled={activeLogin?.provider === "antigravity"}
-            onClick={() => setActiveLogin({ provider: "antigravity", accountRoot: "antigravity-default" })}
-            data-testid="antigravity-login"
-          >
-            {t("login")}
-          </button>
-        </section>
+        {!accounts && !loadFailed && <p role="status" className="text-sm text-text-muted">{tc("loading")}</p>}
+        <div className="grid items-start gap-4 xl:grid-cols-3">
+          {accounts && groupAccountsByProvider(accounts).map((group) => (
+            <section
+              key={group.provider}
+              className="rounded-xl border border-border-default bg-bg-surface p-5"
+              data-testid={`ai-accounts-provider-${group.provider}`}
+            >
+              <header className="mb-3 flex items-center gap-2">
+                <AiProviderIcon provider={group.provider} size={16} />
+                <h2 className="text-sm font-semibold capitalize text-text-primary">
+                  {group.provider}
+                </h2>
+              </header>
 
-        {groupAccountsByProvider(accounts).map((group) => (
-          <section
-            key={group.provider}
-            className="rounded-xl border border-border-default bg-bg-surface p-5"
-            data-testid={`ai-accounts-provider-${group.provider}`}
-          >
-            <header className="mb-3 flex items-center gap-2">
-              <AiProviderIcon provider={group.provider} size={16} />
-              <h2 className="text-sm font-semibold capitalize text-text-primary">
-                {group.provider === "gemini" ? "Gemini CLI (legacy)" : group.provider}
-              </h2>
-            </header>
+              {group.accounts.length === 0 ? (
+                <p className="text-xs text-text-muted">{t("noAccounts")}</p>
+              ) : (
+                <div className="space-y-2">
+                  {group.accounts.map((account) => (
+                    <AccountRow
+                      key={account.accountRoot}
+                      account={account}
+                      isLoginOpen={activeLogin?.accountRoot === account.accountRoot}
+                      onLogin={() => {
+                        if (account.provider === "antigravity" && account.isLoggedIn) {
+                          invalidateAiUsage();
+                          void loadAccounts(true);
+                        } else {
+                          setActiveLogin({ provider: account.provider, accountRoot: account.accountRoot });
+                        }
+                      }}
+                      onRemove={() => void removeAccount(account)}
+                    />
+                  ))}
+                </div>
+              )}
 
-            {group.accounts.length === 0 ? (
-              <p className="text-xs text-text-muted">{t("noAccounts")}</p>
-            ) : (
-              <div className="space-y-2">
-                {group.accounts.map((account) => (
-                  <AccountRow
-                    key={account.accountRoot}
-                    account={account}
-                    isLoginOpen={activeLogin?.accountRoot === account.accountRoot}
-                    onLogin={() => setActiveLogin({
-                      provider: account.provider,
-                      accountRoot: account.accountRoot,
-                    })}
-                    onRemove={() => void removeAccount(account)}
-                  />
-                ))}
-              </div>
-            )}
-
-            <AddAccountForm
-              provider={group.provider}
-              onAdded={(accountRoot) => {
-                void loadAccounts();
-                setActiveLogin({ provider: group.provider, accountRoot });
-              }}
-            />
-          </section>
-        ))}
+              {group.provider !== "antigravity" && <AddAccountForm
+                provider={group.provider}
+                onAdded={(accountRoot) => {
+                  invalidateAiUsage();
+                  void loadAccounts(true);
+                  setActiveLogin({ provider: group.provider, accountRoot });
+                }}
+              />}
+            </section>
+          ))}
+        </div>
       </div>
     </div>
   );

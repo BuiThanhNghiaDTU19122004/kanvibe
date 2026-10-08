@@ -5,30 +5,30 @@ import type { AiUsageAccount, AiUsageAccountResult, AiUsageProvider } from "@/li
 const {
   mockDiscoverClaudeAccounts,
   mockDiscoverCodexAccounts,
-  mockDiscoverGeminiAccounts,
+  mockDiscoverAntigravityAccounts,
   mockReadClaudeUsage,
   mockReadCodexUsage,
-  mockReadGeminiUsage,
+  mockReadAntigravityUsage,
 } = vi.hoisted(() => ({
   mockDiscoverClaudeAccounts: vi.fn(),
   mockDiscoverCodexAccounts: vi.fn(),
-  mockDiscoverGeminiAccounts: vi.fn(),
+  mockDiscoverAntigravityAccounts: vi.fn(),
   mockReadClaudeUsage: vi.fn(),
   mockReadCodexUsage: vi.fn(),
-  mockReadGeminiUsage: vi.fn(),
+  mockReadAntigravityUsage: vi.fn(),
 }));
 
 vi.mock("@/lib/aiUsage/accountDiscovery", () => ({
   discoverProviderAccounts: (provider: AiUsageProvider) => ({
     claude: mockDiscoverClaudeAccounts,
     codex: mockDiscoverCodexAccounts,
-    gemini: mockDiscoverGeminiAccounts,
+    antigravity: mockDiscoverAntigravityAccounts,
   })[provider](),
 }));
 
 vi.mock("@/lib/aiUsage/readClaudeUsage", () => ({ readClaudeUsage: mockReadClaudeUsage }));
 vi.mock("@/lib/aiUsage/readCodexUsage", () => ({ readCodexUsage: mockReadCodexUsage }));
-vi.mock("@/lib/aiUsage/readGeminiUsage", () => ({ readGeminiUsage: mockReadGeminiUsage }));
+vi.mock("@/lib/aiUsage/readAntigravityUsage", () => ({ readAntigravityUsage: mockReadAntigravityUsage }));
 
 function createAccount(provider: AiUsageProvider, accountId: string): AiUsageAccount {
   return {
@@ -56,7 +56,7 @@ function createOkResult(account: AiUsageAccount): AiUsageAccountResult {
 function discoverNothing(): void {
   mockDiscoverClaudeAccounts.mockResolvedValue([]);
   mockDiscoverCodexAccounts.mockResolvedValue([]);
-  mockDiscoverGeminiAccounts.mockResolvedValue([]);
+  mockDiscoverAntigravityAccounts.mockResolvedValue([]);
 }
 
 describe("aggregateAiUsage", () => {
@@ -64,12 +64,25 @@ describe("aggregateAiUsage", () => {
     vi.resetAllMocks();
   });
 
+  it("starts usage reads without waiting for another provider's discovery", async () => {
+    discoverNothing();
+    let finishDiscovery: (accounts: AiUsageAccount[]) => void = () => {};
+    mockDiscoverClaudeAccounts.mockReturnValue(new Promise<AiUsageAccount[]>((resolve) => { finishDiscovery = resolve; }));
+    const codex = createAccount("codex", "codex-seat");
+    mockDiscoverCodexAccounts.mockResolvedValue([codex]);
+    mockReadCodexUsage.mockResolvedValue(createOkResult(codex));
+    const pending = aggregateAiUsage();
+    await vi.waitFor(() => expect(mockReadCodexUsage).toHaveBeenCalledWith(codex));
+    finishDiscovery([]);
+    expect((await pending).accounts.map((account) => account.provider)).toEqual(["claude", "codex", "antigravity"]);
+  });
+
   it("계정을 하나도 못 찾은 provider도 카드 자리를 남긴다", async () => {
     discoverNothing();
 
     const snapshot = await aggregateAiUsage();
 
-    expect(snapshot.accounts.map((result) => result.provider)).toEqual(["claude", "codex", "gemini"]);
+    expect(snapshot.accounts.map((result) => result.provider)).toEqual(["claude", "codex", "antigravity"]);
     expect(snapshot.accounts.every((result) => result.status === "unavailable")).toBe(true);
     expect(snapshot.accounts.every((result) => result.reason === "missing-credentials")).toBe(true);
     expect(mockReadClaudeUsage).not.toHaveBeenCalled();

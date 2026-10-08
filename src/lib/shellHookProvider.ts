@@ -30,7 +30,7 @@ export interface ShellHookScriptDefinition {
   eventLabel: string;
   description: string;
   status: ShellHookStatus;
-  /** stdout에 JSON만 허용하는 런타임(Gemini CLI)을 위해 종료 직전 출력할 내용 */
+  /** stdout에 JSON만 허용하는 런타임(Antigravity CLI)을 위해 종료 직전 출력할 내용 */
   trailingOutput?: string;
   /** 스크립트 상단 주석에 덧붙일 런타임 제약 설명 */
   runtimeNote?: string;

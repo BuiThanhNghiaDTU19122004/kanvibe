@@ -40,31 +40,11 @@ function hasElectronBuilderInstalled() {
   }
 }
 
-function getPackageExecCommand() {
-  const npmExecPath = process.env.npm_execpath || "";
-
-  if (npmExecPath.includes("pnpm")) {
-    return { command: "pnpm", args: ["exec"] };
-  }
-
-  if (npmExecPath.includes("yarn")) {
-    return { command: "yarn", args: ["exec"] };
-  }
-
-  if (npmExecPath.includes("bun")) {
-    return { command: "bunx", args: [] };
-  }
-
-  return { command: process.platform === "win32" ? "npx.cmd" : "npx", args: ["--no-install"] };
-}
 
 function rebuildElectronNativeDependencies() {
-  const packageExec = getPackageExecCommand();
-
-  console.warn("[kanvibe] Postinstall: rebuilding native dependencies for the Electron runtime...");
-  execFileSync(packageExec.command, [...packageExec.args, "electron-rebuild", "-f", "--only", "better-sqlite3"], {
-    stdio: "inherit",
-    env: process.env,
+  // N-API binaries work in both Node and Electron; verify before attempting a rebuild.
+  execFileSync(process.execPath, [path.join(__dirname, "ensure-native-runtime.cjs"), "--electron"], {
+    stdio: "inherit", env: process.env, windowsHide: true,
   });
 }
 

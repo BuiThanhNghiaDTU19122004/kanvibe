@@ -6,7 +6,7 @@ import type { AiUsageProvider } from "@/lib/aiUsage/types";
  * 계정 하나가 디스크의 어디에 놓이고 그 위치를 CLI에 어떻게 알리는지를 provider마다 한곳에 모은다.
  *
  * 탐색과 로그인과 계정 생성이 각자 경로 규칙을 들고 있으면 한쪽만 틀린 채로 남는다.
- * Gemini의 config dir 환경변수가 실제로는 존재하지 않는데도 오래 남아 있던 것이 그 사례다.
+ * Antigravity의 config dir 환경변수가 실제로는 존재하지 않는데도 오래 남아 있던 것이 그 사례다.
  */
 export interface AiProviderConfigDirSpec {
   provider: AiUsageProvider;
@@ -42,24 +42,17 @@ const CODEX_CONFIG_DIR_SPEC: AiProviderConfigDirSpec = {
   defaultLabel: "Codex",
 };
 
-/**
- * Gemini CLI는 config dir를 직접 받지 않는다. `GEMINI_CLI_HOME`은 루트를 받고 그 아래에 `.gemini`를 만든다.
- * 그래서 기본 계정의 루트는 홈 자체이고, 계정을 나눈 루트도 그 아래에 `.gemini`를 한 겹 더 가진다.
- */
-const GEMINI_CONFIG_DIR_SPEC: AiProviderConfigDirSpec = {
-  provider: "gemini",
-  homeEnvVar: "GEMINI_CLI_HOME",
-  defaultRootName: "",
-  siblingRootPrefix: ".gemini-",
-  configDirSubPath: ".gemini",
-  credentialsFileName: "oauth_creds.json",
-  defaultLabel: "Gemini",
+// Antigravity keeps credentials in the OS keyring; named roots are not supported.
+const ANTIGRAVITY_CONFIG_DIR_SPEC: AiProviderConfigDirSpec = {
+  provider: "antigravity", homeEnvVar: "", defaultRootName: ".gemini/antigravity-cli",
+  siblingRootPrefix: ".kanvibe-antigravity-unsupported-", configDirSubPath: "",
+  credentialsFileName: "", defaultLabel: "Antigravity",
 };
 
 export const AI_PROVIDER_CONFIG_DIR_SPECS: Record<AiUsageProvider, AiProviderConfigDirSpec> = {
   claude: CLAUDE_CONFIG_DIR_SPEC,
   codex: CODEX_CONFIG_DIR_SPEC,
-  gemini: GEMINI_CONFIG_DIR_SPEC,
+  antigravity: ANTIGRAVITY_CONFIG_DIR_SPEC,
 };
 
 /** 자격증명이 놓이는 디렉터리. 루트가 곧 config dir인 provider는 루트를 그대로 돌려준다 */

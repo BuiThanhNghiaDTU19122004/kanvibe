@@ -54,9 +54,10 @@ async function directoryExists(targetPath: string): Promise<boolean> {
 beforeEach(async () => {
   fakeHome = await mkdtemp(path.join(tmpdir(), "kanvibe-home-"));
   vi.stubEnv("HOME", fakeHome);
+    vi.stubEnv("USERPROFILE", fakeHome);
   vi.stubEnv("CLAUDE_CONFIG_DIR", "");
   vi.stubEnv("CODEX_HOME", "");
-  vi.stubEnv("GEMINI_CLI_HOME", "");
+  vi.stubEnv("ANTIGRAVITY_CLI_HOME", "");
   useInMemoryAppSettings();
   mockReadProviderAuthStatus.mockResolvedValue(null);
   mockLogoutThroughCli.mockResolvedValue(true);
@@ -80,11 +81,11 @@ describe("addAiAccount", () => {
     ]);
   });
 
-  it("Gemini는 루트 아래 .gemini까지 만들어 CLI가 그 자리를 쓰게 한다", async () => {
-    const result = await addAiAccount("gemini", "work");
+  it("Antigravity는 루트 아래 .antigravity까지 만들어 CLI가 그 자리를 쓰게 한다", async () => {
+    const result = await addAiAccount("antigravity", "work");
 
-    expect(result.accountRoot).toBe(path.join(fakeHome, ".gemini-work"));
-    expect(await directoryExists(path.join(fakeHome, ".gemini-work", ".gemini"))).toBe(true);
+    expect(result.accountRoot).toBe("antigravity-default");
+    expect(await getAiAccountRegistrations()).toEqual([]);
   });
 
   it("홈 밖으로 나갈 수 있는 이름은 거절하고 디렉터리를 만들지 않기까지 한다", async () => {
@@ -190,7 +191,7 @@ describe("removeAiAccount", () => {
   it("앱에서 로그아웃할 수 없는 provider는 사용자에게 사실대로 알린다", async () => {
     mockLogoutThroughCli.mockResolvedValue(false);
 
-    const result = await removeAiAccount("gemini", path.join(fakeHome, ".gemini-manual"));
+    const result = await removeAiAccount("antigravity", path.join(fakeHome, ".antigravity-manual"));
 
     expect(result.outcome).toBe("manual-logout-required");
   });

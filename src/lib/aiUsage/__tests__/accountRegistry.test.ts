@@ -49,10 +49,10 @@ describe("parseAccountRegistrations", () => {
 
 describe("addAccountRegistration", () => {
   it("provider 규칙대로 계정 루트를 만들어 등록한다", () => {
-    const registrations = addAccountRegistration([], "gemini", "work", FAKE_HOME);
+    const registrations = addAccountRegistration([], "claude", "work", FAKE_HOME);
 
     expect(registrations).toEqual([
-      { provider: "gemini", accountRoot: path.join(FAKE_HOME, ".gemini-work"), accountName: "work" },
+      { provider: "claude", accountRoot: path.join(FAKE_HOME, ".claude-work"), accountName: "work" },
     ]);
   });
 

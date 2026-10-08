@@ -8,8 +8,8 @@ export const KANVIBE_STATE_DIR_EXCLUDE_PATTERN = ".kanvibe/";
 const EXCLUDE_PATTERNS = [
   ".claude/hooks/",
   ".claude/settings.json",
-  ".gemini/hooks/",
-  ".gemini/settings.json",
+  ".agents/hooks/",
+  ".agents/hooks.json",
   ".codex/hooks/",
   ".codex/hooks.json",
   ".codex/config.toml",

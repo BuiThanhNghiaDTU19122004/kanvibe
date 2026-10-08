@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/nativeAgentRuntime", () => ({ readNativeAgentMonitor: vi.fn(async () => ({ panes: [], runtimes: [], readAt: "2026-10-06T12:00:00Z" })) }));
+
 const mocks = vi.hoisted(() => ({
   execGit: vi.fn(),
   homedir: vi.fn(() => "/home/tester"),
@@ -18,8 +20,8 @@ const mocks = vi.hoisted(() => ({
   getDefaultSessionType: vi.fn(),
   setupClaudeHooks: vi.fn(),
   getClaudeHooksStatus: vi.fn(),
-  setupGeminiHooks: vi.fn(),
-  getGeminiHooksStatus: vi.fn(),
+  setupAntigravityHooks: vi.fn(),
+  getAntigravityHooksStatus: vi.fn(),
   setupCodexHooks: vi.fn(),
   getCodexHooksStatus: vi.fn(),
   setupOpenCodeHooks: vi.fn(),
@@ -98,9 +100,9 @@ vi.mock("@/lib/claudeHooksSetup", () => ({
   getClaudeHooksStatus: mocks.getClaudeHooksStatus,
 }));
 
-vi.mock("@/lib/geminiHooksSetup", () => ({
-  setupGeminiHooks: mocks.setupGeminiHooks,
-  getGeminiHooksStatus: mocks.getGeminiHooksStatus,
+vi.mock("@/lib/antigravityHooksSetup", () => ({
+  setupAntigravityHooks: mocks.setupAntigravityHooks,
+  getAntigravityHooksStatus: mocks.getAntigravityHooksStatus,
 }));
 
 vi.mock("@/lib/codexHooksSetup", () => ({
@@ -305,7 +307,7 @@ describe("projectService.listSubdirectories", () => {
     mocks.listBranches.mockResolvedValue(["main", "develop"]);
     mocks.getDefaultSessionType.mockResolvedValue("tmux");
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: false });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: false });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: false });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: false });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: false });
   });
@@ -388,7 +390,7 @@ describe("projectService remote registration flow", () => {
     mocks.execGit.mockResolvedValue("");
     mocks.getDefaultSessionType.mockResolvedValue("tmux");
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: false });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: false });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: false });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: false });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: false });
   });
@@ -480,7 +482,7 @@ describe("projectService remote registration flow", () => {
       },
     ]);
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
 
@@ -778,7 +780,7 @@ describe("projectService local hook installation", () => {
     mocks.execGit.mockResolvedValue("");
     mocks.getDefaultSessionType.mockResolvedValue("tmux");
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: false });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: false });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: false });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: false });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: false });
   });
@@ -1118,7 +1120,7 @@ describe("projectService local hook installation", () => {
       await vi.runAllTimersAsync();
 
       expect(mocks.getClaudeHooksStatus).not.toHaveBeenCalled();
-      expect(mocks.getGeminiHooksStatus).not.toHaveBeenCalled();
+      expect(mocks.getAntigravityHooksStatus).not.toHaveBeenCalled();
       expect(mocks.getCodexHooksStatus).not.toHaveBeenCalled();
       expect(mocks.getOpenCodeHooksStatus).not.toHaveBeenCalled();
       expect(mocks.installKanvibeHooks).not.toHaveBeenCalled();
@@ -1215,7 +1217,7 @@ describe("projectService local hook installation", () => {
     mocks.getDefaultBranch.mockResolvedValue("main");
     mocks.createSessionWithoutWorktree.mockResolvedValue({ sessionName: "api-main" });
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([
@@ -1311,7 +1313,7 @@ describe("projectService local hook installation", () => {
     });
     mocks.getDefaultBranch.mockResolvedValue("main");
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([]);
@@ -1365,7 +1367,7 @@ describe("projectService local hook installation", () => {
     });
     mocks.getDefaultBranch.mockResolvedValue("main");
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([
@@ -1442,7 +1444,7 @@ describe("projectService local hook installation", () => {
       mocks.scanGitRepos.mockResolvedValue(["/remote/repo"]);
       mocks.getDefaultBranch.mockResolvedValue("main");
       mocks.getClaudeHooksStatus.mockRejectedValue(remoteConnectionError);
-      mocks.getGeminiHooksStatus.mockRejectedValue(remoteConnectionError);
+      mocks.getAntigravityHooksStatus.mockRejectedValue(remoteConnectionError);
       mocks.getCodexHooksStatus.mockRejectedValue(remoteConnectionError);
       mocks.getOpenCodeHooksStatus.mockRejectedValue(remoteConnectionError);
       mocks.listWorktrees.mockResolvedValue([
@@ -1500,7 +1502,7 @@ describe("projectService local hook installation", () => {
 
       expect(result.worktreeTasks).toContain("feature-login");
       expect(mocks.getClaudeHooksStatus).not.toHaveBeenCalled();
-      expect(mocks.getGeminiHooksStatus).not.toHaveBeenCalled();
+      expect(mocks.getAntigravityHooksStatus).not.toHaveBeenCalled();
       expect(mocks.getCodexHooksStatus).not.toHaveBeenCalled();
       expect(mocks.getOpenCodeHooksStatus).not.toHaveBeenCalled();
     } finally {
@@ -1513,7 +1515,7 @@ describe("projectService local hook installation", () => {
     mocks.getDefaultBranch.mockResolvedValue("main");
     mocks.createSessionWithoutWorktree.mockResolvedValue({ sessionName: "api-main" });
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([]);
@@ -1572,7 +1574,7 @@ describe("projectService local hook installation", () => {
     mocks.getDefaultBranch.mockResolvedValue("main");
     mocks.createSessionWithoutWorktree.mockResolvedValue({ sessionName: "api-main" });
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([
@@ -1657,7 +1659,7 @@ describe("projectService local hook installation", () => {
 
   it("등록된 프로젝트 background sync는 기존 root hooks를 자동 복구하지 않는다", async () => {
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: false });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: false });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: false });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: false });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: false });
     mocks.listWorktrees.mockResolvedValue([
@@ -1705,7 +1707,7 @@ describe("projectService local hook installation", () => {
 
     expect(result.changed).toBe(false);
     expect(mocks.getClaudeHooksStatus).not.toHaveBeenCalled();
-    expect(mocks.getGeminiHooksStatus).not.toHaveBeenCalled();
+    expect(mocks.getAntigravityHooksStatus).not.toHaveBeenCalled();
     expect(mocks.getCodexHooksStatus).not.toHaveBeenCalled();
     expect(mocks.getOpenCodeHooksStatus).not.toHaveBeenCalled();
     expect(mocks.installKanvibeHooks).not.toHaveBeenCalled();
@@ -1810,7 +1812,7 @@ describe("projectService local hook installation", () => {
 
     try {
       mocks.getClaudeHooksStatus.mockResolvedValue({ installed: false });
-      mocks.getGeminiHooksStatus.mockResolvedValue({ installed: false });
+      mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: false });
       mocks.getCodexHooksStatus.mockResolvedValue({ installed: false });
       mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: false });
       mocks.listWorktrees.mockResolvedValue([
@@ -1859,7 +1861,7 @@ describe("projectService local hook installation", () => {
 
       expect(result.changed).toBe(false);
       expect(mocks.getClaudeHooksStatus).not.toHaveBeenCalled();
-      expect(mocks.getGeminiHooksStatus).not.toHaveBeenCalled();
+      expect(mocks.getAntigravityHooksStatus).not.toHaveBeenCalled();
       expect(mocks.getCodexHooksStatus).not.toHaveBeenCalled();
       expect(mocks.getOpenCodeHooksStatus).not.toHaveBeenCalled();
       expect(mocks.installKanvibeHooks).not.toHaveBeenCalled();
@@ -1872,7 +1874,7 @@ describe("projectService local hook installation", () => {
   it("등록된 프로젝트 background sync는 새 worktree를 TODO task로 등록한다", async () => {
     // Given
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([
@@ -1947,7 +1949,7 @@ describe("projectService local hook installation", () => {
 
   it("등록된 프로젝트 background sync는 활성 세션이 있어도 .kanvibe 상태가 없으면 새 worktree를 TODO task로 등록한다", async () => {
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([
@@ -2021,7 +2023,7 @@ describe("projectService local hook installation", () => {
 
   it("등록된 프로젝트 background sync는 .kanvibe task 상태가 있으면 그 상태로 새 worktree를 등록한다", async () => {
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([
@@ -2087,7 +2089,7 @@ describe("projectService local hook installation", () => {
 
   it("등록된 프로젝트 background sync는 기존 worktree task도 .kanvibe task 상태대로 갱신한다", async () => {
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([
@@ -2168,7 +2170,7 @@ describe("projectService local hook installation", () => {
     mocks.readTextFile.mockResolvedValue(JSON.stringify({ schemaVersion: 1, status: "review", updatedAt: "2026-06-03T00:00:00.000Z" }));
     mocks.createSessionWithoutWorktree.mockResolvedValue({ sessionName: "api-main" });
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
 
@@ -2205,7 +2207,7 @@ describe("projectService local hook installation", () => {
 
   it("등록된 프로젝트 background sync는 orphan worktree task도 .kanvibe 상태대로 연결한다", async () => {
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([
@@ -2338,7 +2340,7 @@ describe("projectService local hook installation", () => {
     try {
       // Given
       mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-      mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+      mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
       mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
       mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
       mocks.listWorktrees.mockResolvedValue([
@@ -2409,7 +2411,7 @@ describe("projectService local hook installation", () => {
   it("등록된 프로젝트 background sync는 프로젝트별 worktree 조회를 직렬로 실행한다", async () => {
     // Given
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.isSessionAlive.mockResolvedValue(false);
@@ -2546,7 +2548,7 @@ describe("projectService remote hook and AI session support", () => {
     mocks.execGit.mockResolvedValue("");
     mocks.getDefaultSessionType.mockResolvedValue("tmux");
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: false });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: false });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: false });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: false });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: false });
   });
@@ -2601,24 +2603,24 @@ describe("projectService remote hook and AI session support", () => {
       findOneBy,
     });
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
 
     const {
       getTaskHooksStatus,
-      getTaskGeminiHooksStatus,
+      getTaskAntigravityHooksStatus,
       getTaskCodexHooksStatus,
       getTaskOpenCodeHooksStatus,
     } = await import("@/desktop/main/services/projectService");
 
     await getTaskHooksStatus(task.id);
-    await getTaskGeminiHooksStatus(task.id);
+    await getTaskAntigravityHooksStatus(task.id);
     await getTaskCodexHooksStatus(task.id);
     await getTaskOpenCodeHooksStatus(task.id);
 
     expect(mocks.getClaudeHooksStatus).toHaveBeenCalledWith("/remote/repo", "task-remote", "remote-host");
-    expect(mocks.getGeminiHooksStatus).toHaveBeenCalledWith("/remote/repo", "task-remote", "remote-host");
+    expect(mocks.getAntigravityHooksStatus).toHaveBeenCalledWith("/remote/repo", "task-remote", "remote-host");
     expect(mocks.getCodexHooksStatus).toHaveBeenCalledWith("/remote/repo", "task-remote", "remote-host");
     expect(mocks.getOpenCodeHooksStatus).toHaveBeenCalledWith("/remote/repo", "task-remote", "remote-host");
     expect(findOneBy).not.toHaveBeenCalled();
@@ -2675,25 +2677,25 @@ describe("projectService remote hook and AI session support", () => {
       findOneBy: vi.fn(),
     });
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
 
     const {
       installTaskHooks,
-      installTaskGeminiHooks,
+      installTaskAntigravityHooks,
       installTaskCodexHooks,
       installTaskOpenCodeHooks,
     } = await import("@/desktop/main/services/projectService");
 
     await installTaskHooks(task.id);
-    await installTaskGeminiHooks(task.id);
+    await installTaskAntigravityHooks(task.id);
     await installTaskCodexHooks(task.id);
     await installTaskOpenCodeHooks(task.id);
 
     expect(mocks.installKanvibeHookProvider).toHaveBeenCalledTimes(4);
     expect(mocks.installKanvibeHookProvider).toHaveBeenNthCalledWith(1, "/remote/repo", "task-remote", "claude", "remote-host");
-    expect(mocks.installKanvibeHookProvider).toHaveBeenNthCalledWith(2, "/remote/repo", "task-remote", "gemini", "remote-host");
+    expect(mocks.installKanvibeHookProvider).toHaveBeenNthCalledWith(2, "/remote/repo", "task-remote", "antigravity", "remote-host");
     expect(mocks.installKanvibeHookProvider).toHaveBeenNthCalledWith(3, "/remote/repo", "task-remote", "codex", "remote-host");
     expect(mocks.installKanvibeHookProvider).toHaveBeenNthCalledWith(4, "/remote/repo", "task-remote", "openCode", "remote-host");
     expect(mocks.installKanvibeHooks).not.toHaveBeenCalled();
@@ -2747,7 +2749,7 @@ describe("projectService task description sync", () => {
     mocks.execGit.mockResolvedValue("");
     mocks.getDefaultSessionType.mockResolvedValue("tmux");
     mocks.getClaudeHooksStatus.mockResolvedValue({ installed: true });
-    mocks.getGeminiHooksStatus.mockResolvedValue({ installed: true });
+    mocks.getAntigravityHooksStatus.mockResolvedValue({ installed: true });
     mocks.getCodexHooksStatus.mockResolvedValue({ installed: true });
     mocks.getOpenCodeHooksStatus.mockResolvedValue({ installed: true });
     mocks.listWorktrees.mockResolvedValue([

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useIsWindowActive } from "@/desktop/renderer/hooks/useIsWindowActive";
 
 /**
@@ -8,13 +8,15 @@ import { useIsWindowActive } from "@/desktop/renderer/hooks/useIsWindowActive";
  * 창이 가려져 있으면 주기 조회는 멈추되 첫 조회는 한 번 한다.
  * 그래야 창이 다시 앞으로 나왔을 때 빈 화면부터 보여주지 않는다.
  */
-export function usePolledValue<T>(
+export function usePolledResource<T>(
   read: () => Promise<T>,
   emptyValue: T,
   intervalMs: number,
   isEnabled: boolean,
-): T {
-  const [value, setValue] = useState<T>(emptyValue);
+) {
+  const [resource, setResource] = useState({ value: emptyValue, error: false, updatedAt: null as string | null });
+  const [retryKey, setRetryKey] = useState(0);
+  const retry = useCallback(() => setRetryKey((key) => key + 1), []);
   const isWindowActive = useIsWindowActive();
 
   useEffect(() => {
@@ -34,10 +36,10 @@ export function usePolledValue<T>(
       try {
         const nextValue = await read();
         if (!isCancelled) {
-          setValue(nextValue);
+          setResource({ value: nextValue, error: false, updatedAt: new Date().toISOString() });
         }
       } catch {
-        // 폴링 실패는 다음 주기에 다시 시도한다. 화면을 오류로 덮지 않는다.
+        if (!isCancelled) setResource((current) => ({ ...current, error: true }));
       } finally {
         isReading = false;
       }
@@ -59,7 +61,11 @@ export function usePolledValue<T>(
       isCancelled = true;
       window.clearInterval(pollIntervalId);
     };
-  }, [intervalMs, isEnabled, isWindowActive, read]);
+  }, [intervalMs, isEnabled, isWindowActive, read, retryKey]);
 
-  return value;
+  return { ...resource, retry };
+}
+
+export function usePolledValue<T>(read: () => Promise<T>, emptyValue: T, intervalMs: number, isEnabled: boolean): T {
+  return usePolledResource(read, emptyValue, intervalMs, isEnabled).value;
 }

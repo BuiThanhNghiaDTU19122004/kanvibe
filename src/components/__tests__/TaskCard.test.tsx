@@ -189,10 +189,11 @@ describe("TaskCard - Priority Badge", () => {
 
       // Then
       expect(screen.getByText("PR")).toBeTruthy();
-      expect(screen.getByText("claude")).toBeTruthy();
+      expect(screen.getAllByText("claude").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText("tmux")).toBeTruthy();
       expect(screen.getByTestId("task-card-diff-stats")).toBeTruthy();
       expect(screen.getByTestId("task-card-running-agents")).toBeTruthy();
+      expect(screen.getByTestId("task-card-active-agent-banner")).toBeTruthy();
       expect(screen.getByText("very-long-remote-development-host.example.com")).toBeTruthy();
       expect(screen.getByTestId("task-priority-badge").textContent).toBe("P1");
     });

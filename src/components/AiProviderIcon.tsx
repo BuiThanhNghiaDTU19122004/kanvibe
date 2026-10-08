@@ -1,18 +1,18 @@
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claude-color.svg";
 import codexIconUrl from "@lobehub/icons-static-svg/icons/codex-color.svg";
-import geminiIconUrl from "@lobehub/icons-static-svg/icons/gemini-color.svg";
+import antigravityIconUrl from "@lobehub/icons-static-svg/icons/antigravity-color.svg";
 import openCodeIconUrl from "@lobehub/icons-static-svg/icons/opencode.svg";
 
-export type AiProviderIconName = "claude" | "gemini" | "codex" | "opencode";
+export type AiProviderIconName = "claude" | "antigravity" | "codex" | "opencode";
 
 const AI_PROVIDER_ICON_META = {
   claude: {
     displayName: "Claude",
     src: claudeIconUrl,
   },
-  gemini: {
-    displayName: "Gemini",
-    src: geminiIconUrl,
+  antigravity: {
+    displayName: "Antigravity",
+    src: antigravityIconUrl,
   },
   codex: {
     displayName: "Codex",

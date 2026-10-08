@@ -126,7 +126,7 @@ export default function BoardPageFindBar({ vimModeEnabled }: BoardPageFindBarPro
   }
 
   return (
-    <div className="fixed right-6 top-6 z-[450] w-full max-w-md rounded-xl border border-border-default bg-bg-surface p-3 shadow-xl">
+    <div style={{ top: "calc(var(--desktop-titlebar-height, 0px) + 1.5rem)" }} className="fixed right-6 z-[450] w-full max-w-md rounded-xl border border-border-default bg-bg-surface p-3 shadow-xl">
       <div className="flex items-center gap-2">
         <input
           ref={inputRef}
