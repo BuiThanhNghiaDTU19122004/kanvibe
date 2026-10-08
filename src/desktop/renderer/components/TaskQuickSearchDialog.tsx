@@ -514,7 +514,7 @@ export default function TaskQuickSearchDialog({
 
                     <div className="flex shrink-0 items-center gap-2">
                       {isRemote && task.sshHost ? (
-                        <span className="rounded-full bg-tag-gemini-bg px-2 py-0.5 text-[11px] font-medium text-tag-gemini-text">
+                        <span className="rounded-full bg-tag-antigravity-bg px-2 py-0.5 text-[11px] font-medium text-tag-antigravity-text">
                           {tc("remote")}
                         </span>
                       ) : null}
