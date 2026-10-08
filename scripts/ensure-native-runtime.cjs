@@ -2,6 +2,7 @@
 
 const { execFileSync } = require("node:child_process");
 const path = require("node:path");
+const { execPnpmSync } = require("./package-runtime.cjs");
 
 const REQUIRED_NODE_MAJOR = 24;
 const isRunningInsideElectron = Boolean(process.versions.electron);
@@ -49,7 +50,7 @@ function verifyNodeBetterSqlite3Binding() {
 
 function verifyElectronBetterSqlite3Binding() {
   try {
-    execFileSync("pnpm", ["exec", "electron", "--no-sandbox", path.join(__dirname, "verify-electron-better-sqlite3.cjs")], {
+    execPnpmSync(["exec", "electron", "--no-sandbox", path.join(__dirname, "verify-electron-better-sqlite3.cjs")], {
       stdio: ["ignore", "inherit", "pipe"],
       env: process.env,
     });
@@ -89,23 +90,6 @@ function verifyBetterSqlite3BindingAfterRebuild() {
   verifyBetterSqlite3Binding();
 }
 
-function getPackageExecCommand() {
-  const npmExecPath = process.env.npm_execpath || "";
-
-  if (npmExecPath.includes("pnpm")) {
-    return { command: "pnpm", args: ["exec"] };
-  }
-
-  if (npmExecPath.includes("yarn")) {
-    return { command: "yarn", args: ["exec"] };
-  }
-
-  if (npmExecPath.includes("bun")) {
-    return { command: "bunx", args: [] };
-  }
-
-  return { command: process.platform === "win32" ? "npx.cmd" : "npx", args: ["--no-install"] };
-}
 
 function rebuildNativeDependency() {
   const env = {
@@ -118,10 +102,10 @@ function rebuildNativeDependency() {
       throw new Error("better-sqlite3 ABI mismatch in packaged Electron runtime");
     }
 
-    const packageExec = getPackageExecCommand();
+
 
     console.warn("[kanvibe] Detected Electron native ABI mismatch. Rebuilding better-sqlite3 for Electron...");
-    execFileSync(packageExec.command, [...packageExec.args, "electron-rebuild", "-f", "--only", "better-sqlite3"], {
+    execPnpmSync(["exec", "electron-rebuild", "-f", "--only", "better-sqlite3"], {
       stdio: "inherit",
       env,
     });
@@ -129,7 +113,7 @@ function rebuildNativeDependency() {
   }
 
   console.warn("[kanvibe] Detected Node native ABI mismatch. Rebuilding better-sqlite3...");
-  execFileSync("pnpm", ["rebuild", "better-sqlite3"], {
+  execPnpmSync(["rebuild", "better-sqlite3"], {
     stdio: "inherit",
     env,
   });
