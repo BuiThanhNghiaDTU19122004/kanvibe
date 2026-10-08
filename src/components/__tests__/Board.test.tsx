@@ -1,3 +1,6 @@
+vi.mock("@/components/LanguageSelector", () => ({ default: () => null }));
+vi.mock("@/components/SetupChecklist", () => ({ default: () => null }));
+vi.mock("@/desktop/renderer/hooks/useLiveAiSessions", async (importOriginal) => ({ ...(await importOriginal<object>()), useAgentMonitor: () => ({ value: { panes: [], runtimes: [] }, error: false, updatedAt: null, retry: () => {} }) }));
 import { forwardRef, useEffect, useImperativeHandle } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -420,6 +423,7 @@ function BoardShortcutBlocker() {
 describe("Board defaultSessionType sync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.setItem("kanvibe:board-view", "kanban");
     vi.mocked(useTaskKindFilterParams).mockReturnValue(["all", vi.fn()] as const);
     vi.mocked(useBoardSortPreference).mockReturnValue([{ keys: [] }, vi.fn()] as const);
     delete window.kanvibeDesktop;
@@ -504,7 +508,7 @@ describe("Board defaultSessionType sync", () => {
 
     expect(taskKindFilter.getAttribute("aria-label")).toBe("taskKindFilter.label");
     expect(taskKindFilter.className).toContain("h-[34px]");
-    expect(taskKindFilter.className).toContain("w-[180px]");
+    expect(taskKindFilter.className).toContain("min-w-[210px]");
     expect(allFilterButton.className).toContain("bg-brand-primary");
     expect(allFilterButton.className).toContain("text-text-inverse");
     expect(projectSelectorContainer.className).toContain("w-64");
