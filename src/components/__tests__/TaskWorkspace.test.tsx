@@ -1,0 +1,21 @@
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+import TaskWorkspace from "../TaskWorkspace";
+import type { KanbanTask } from "@/entities/KanbanTask";
+const mocks=vi.hoisted(()=>({history:vi.fn(),detail:vi.fn(),live:vi.fn(),diff:vi.fn()}));
+vi.mock("next-intl",()=>({useTranslations:()=>(key:string)=>key,useLocale:()=>"en"}));
+vi.mock("@/desktop/renderer/actions/project",()=>({getTaskAiSessions:mocks.history,getTaskAiSessionDetail:mocks.detail,getTaskLiveAiSessions:mocks.live,getTaskAgentCallGraph:vi.fn()}));
+vi.mock("@/desktop/renderer/actions/diff",()=>({getGitDiffFiles:mocks.diff}));
+vi.mock("@/desktop/renderer/navigation",()=>({Link:({children}:{children:React.ReactNode})=><span>{children}</span>}));
+vi.mock("@/desktop/renderer/components/AiSessionMessageContent",()=>({AiSessionMessageContent:({text}:{text:string})=><div>{text}</div>}));
+vi.mock("@/desktop/renderer/components/LiveAiSessionPanel",()=>({LiveAiSessionPanel:()=>null}));
+vi.mock("@/desktop/renderer/components/AgentCallGraphPanel",()=>({AgentCallGraphPanel:()=>null}));
+const task={id:"t1",agentType:"claude",title:"Request",description:"Fix the bug",branchName:"feat/bug",worktreePath:"D:/work"} as KanbanTask;
+const callbacks={onOpenTerminal:vi.fn(),onContinue:vi.fn(),onDone:vi.fn()};
+describe("task activity and manual review",()=>{
+ beforeEach(()=>{vi.clearAllMocks();mocks.history.mockResolvedValue({sessions:[{id:"s1",provider:"claude"}],sources:[]});mocks.live.mockResolvedValue({sessions:[]});mocks.diff.mockResolvedValue([]);mocks.detail.mockResolvedValue({messages:[{role:"assistant",text:"Newest answer",timestamp:"2026-10-06T12:00:00Z"},{role:"assistant",text:"Old answer",timestamp:"2026-10-06T11:00:00Z"}]});});
+ it("shows messages chronologically even though readers paginate newest first",async()=>{render(<TaskWorkspace task={task} view="activity" {...callbacks}/>);await screen.findByText("Newest answer");const messages=screen.getAllByText(/answer$/);expect(messages.map(m=>m.textContent)).toEqual(["Old answer","Newest answer"]);});
+ it("uses the latest assistant response and never claims checks passed",async()=>{render(<TaskWorkspace task={task} view="results" {...callbacks}/>);await screen.findByText("Newest answer");expect(screen.queryByText("Old answer")).toBeNull();expect(screen.getByText("checksUnknown")).toBeTruthy();expect(callbacks.onDone).not.toHaveBeenCalled();fireEvent.click(screen.getByText("markDone"));expect(callbacks.onDone).toHaveBeenCalledTimes(1);});
+ it("does not substitute another provider's conversation when selected provider has no log",async()=>{mocks.history.mockResolvedValue({sessions:[{id:"other",provider:"codex"}],sources:[]});render(<TaskWorkspace task={task} view="results" {...callbacks}/>);await screen.findByText("noResponse");expect(mocks.detail).not.toHaveBeenCalled();});
+ it("retains a visible error with retry instead of reporting no changed files",async()=>{mocks.diff.mockRejectedValueOnce(new Error("Git failed"));render(<TaskWorkspace task={task} view="results" {...callbacks}/>);await screen.findByRole("alert");expect(screen.queryByText("noChangedFiles")).toBeNull();fireEvent.click(screen.getByText("retry"));await waitFor(()=>expect(screen.queryByRole("alert")).toBeNull());expect(mocks.diff).toHaveBeenCalledTimes(2);});
+});
