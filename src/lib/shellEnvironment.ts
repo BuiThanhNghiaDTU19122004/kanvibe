@@ -12,6 +12,10 @@ const MAC_LOCAL_COMMAND_PATHS = [
 
 function getUserLocalCommandPaths(homeDirectory: string): string[] {
   return [
+    ...(process.platform === "win32" ? [
+      path.join(process.env.LOCALAPPDATA || path.join(homeDirectory, "AppData", "Local"), "agy", "bin"),
+      process.env.APPDATA ? path.join(process.env.APPDATA, "npm") : "",
+    ] : []),
     path.join(homeDirectory, ".local", "bin"),
     path.join(homeDirectory, ".cargo", "bin"),
     path.join(homeDirectory, ".opencode", "bin"),
