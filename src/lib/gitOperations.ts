@@ -10,6 +10,8 @@ import {
   type SSHHostConfig,
 } from "@/lib/sshConfig";
 import { createLocalShellEnvironment } from "@/lib/shellEnvironment";
+import { scanLocalGitRepos } from "@/lib/localDirectories";
+import { resolveGitBash } from "@/lib/windowsRuntime";
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -189,6 +191,7 @@ function isSSHCommandTimeoutError(error: unknown): boolean {
 async function execLocal(command: string, options?: ExecGitOptions): Promise<string> {
   const { stdout } = await execAsync(command, {
     env: createLocalShellEnvironment(),
+    ...(process.platform === "win32" ? { shell: resolveGitBash(), windowsHide: true } : {}),
     ...(options?.timeoutMs ? { timeout: options.timeoutMs } : {}),
   });
   return stdout.trim();
@@ -773,6 +776,7 @@ export async function scanGitRepos(
   rootPath: string,
   sshHost?: string | null
 ): Promise<string[]> {
+  if (!sshHost && process.platform === "win32") return scanLocalGitRepos(rootPath);
   const resolvedPath = resolvePathForShell(rootPath, sshHost);
   const command = `find ${resolvedPath} -maxdepth 4 -name ".git" \\( -type d -o -type f \\) 2>/dev/null`;
 
