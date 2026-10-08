@@ -21,7 +21,7 @@ import type { AiUsageAccount, AiUsageProvider } from "@/lib/aiUsage/types";
 /** KanVibe에서 만든 AI 계정 목록. 로그아웃된 계정도 자리를 지키게 하는 유일한 근거다 */
 const AI_ACCOUNTS_KEY = "ai_accounts";
 
-const AI_USAGE_PROVIDERS: AiUsageProvider[] = ["claude", "codex", "gemini"];
+const AI_USAGE_PROVIDERS: AiUsageProvider[] = ["claude", "codex", "antigravity"];
 
 export interface AiAccountSummary {
   provider: AiUsageProvider;
@@ -60,6 +60,12 @@ async function toAccountSummary(
   account: AiUsageAccount,
   registeredRoots: Set<string>,
 ): Promise<AiAccountSummary> {
+  if (account.provider === "antigravity") {
+    const auth = await readProviderAuthStatus("antigravity", account.accountRoot);
+    return { provider: "antigravity", accountRoot: account.accountRoot, accountName: null,
+      label: auth?.label ?? "Antigravity", isLoggedIn: auth?.isLoggedIn ?? false,
+      planName: auth?.planName ?? null, isRemovable: false };
+  }
   const spec = AI_PROVIDER_CONFIG_DIR_SPECS[account.provider];
   const authStatus = await readProviderAuthStatus(account.provider, account.accountRoot);
   const isLoggedIn = authStatus?.isLoggedIn
@@ -101,6 +107,7 @@ export async function addAiAccount(
   provider: AiUsageProvider,
   accountName: string,
 ): Promise<AiAccountMutationResult & { accountRoot?: string }> {
+  if (provider === "antigravity") return { outcome: "ok", accountRoot: "antigravity-default" };
   if (!isValidAccountName(accountName)) {
     return { outcome: "invalid-name" };
   }
@@ -130,6 +137,7 @@ export async function removeAiAccount(
   provider: AiUsageProvider,
   accountRoot: string,
 ): Promise<AiAccountMutationResult> {
+  if (provider === "antigravity") return { outcome: "manual-logout-required" };
   const registrations = await getAiAccountRegistrations();
   const isRegistered = registrations.some(
     (registration) => registration.accountRoot === accountRoot,
