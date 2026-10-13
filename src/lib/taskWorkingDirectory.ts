@@ -2,7 +2,8 @@ import { existsSync } from "fs";
 
 export interface TaskWorkingDirectoryContext {
   worktreePath?: string | null;
-  project?: { repoPath: string } | null;
+  branchName?: string | null;
+  project?: { repoPath: string; defaultBranch?: string | null } | null;
 }
 
 /**
@@ -25,8 +26,10 @@ export type ValidLocalWorkingDirectoryResult =
 /**
  * For a local session, resolves and validates the working directory against the filesystem.
  * If task.worktreePath exists on disk, it is used.
- * If task.worktreePath does not exist, it falls back to task.project?.repoPath if that exists.
- * If neither exists on disk (or neither was provided), it returns an error result.
+ * If task.worktreePath is unset, or the task is the project's default-branch task, it falls back to
+ * task.project?.repoPath if that exists. Other branch tasks never fall back, because the repo root
+ * has a different branch checked out.
+ * If nothing usable exists on disk (or neither was provided), it returns an error result.
  */
 export function resolveValidLocalWorkingDirectory(
   task: TaskWorkingDirectoryContext | null | undefined,
@@ -42,7 +45,8 @@ export function resolveValidLocalWorkingDirectory(
     return { ok: true, cwd: worktreePath };
   }
 
-  if (repoPath && existsSync(repoPath)) {
+  const canUseRepoRoot = !worktreePath || task.branchName === task.project?.defaultBranch;
+  if (canUseRepoRoot && repoPath && existsSync(repoPath)) {
     return { ok: true, cwd: repoPath };
   }
 

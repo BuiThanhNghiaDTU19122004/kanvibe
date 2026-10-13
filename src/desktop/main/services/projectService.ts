@@ -332,13 +332,12 @@ export async function ensureProjectRootTask(
   }
 
   const expectedDefaultBranchWorktreePath = await resolveProjectDefaultBranchWorktreePath(project);
-  const activeWorktreePath = expectedDefaultBranchWorktreePath || task.worktreePath || project.repoPath;
   const {
     status: persistedStatus,
     description: persistedDescription,
     projectPriority: persistedProjectPriority,
   } = await readPersistedTaskSyncState(
-    activeWorktreePath,
+    expectedDefaultBranchWorktreePath || task.worktreePath || project.repoPath,
     project.sshHost,
     project.repoPath,
   );
@@ -390,7 +389,8 @@ export async function ensureProjectRootTask(
     repaired = true;
   }
 
-  await persistTaskState(activeWorktreePath, task, project.sshHost);
+  // 위 repair 결과를 반영해야 사라진 worktree 경로에 .kanvibe 디렉터리를 다시 만들지 않는다
+  await persistTaskState(expectedDefaultBranchWorktreePath || task.worktreePath || project.repoPath, task, project.sshHost);
 
   if (!repairHooks) {
     return { task, repaired };

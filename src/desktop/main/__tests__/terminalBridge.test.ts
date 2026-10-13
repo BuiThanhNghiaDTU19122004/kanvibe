@@ -160,14 +160,53 @@ describe("terminalBridge.openTerminal working directory resolution", () => {
     expect(passedCwd).toBe("/workspace/my-repo");
   });
 
-  it("falls back to project.repoPath when task.worktreePath does not exist on disk", async () => {
+  it("does not open a deleted feature worktree at the repo root, which has another branch checked out", async () => {
+    mockFindOne.mockResolvedValue({
+      id: "task-feature",
+      sessionType: "terminal",
+      sessionName: "s-feature",
+      sshHost: null,
+      branchName: "feat/x",
+      worktreePath: "/workspace/my-repo__worktrees/feat-x",
+      project: { repoPath: "/workspace/my-repo", defaultBranch: "main" },
+    });
+    mockExistsSync.mockImplementation((p) => p === "/workspace/my-repo");
+
+    const { openTerminal } = await importBridge();
+    const result = await openTerminal(createMockWebContents(5) as never, "task-feature", null, 80, 24);
+
+    expect(result.ok).toBe(false);
+    expect(mockAttachLocalSession).not.toHaveBeenCalled();
+  });
+
+  it("still attaches a tmux session when its working directory is gone", async () => {
+    mockFindOne.mockResolvedValue({
+      id: "task-tmux",
+      sessionType: "tmux",
+      sessionName: "s-tmux",
+      sshHost: null,
+      branchName: "feat/x",
+      worktreePath: "/workspace/gone",
+      project: { repoPath: "/workspace/my-repo", defaultBranch: "main" },
+    });
+    mockExistsSync.mockReturnValue(false);
+
+    const { openTerminal } = await importBridge();
+    const result = await openTerminal(createMockWebContents(6) as never, "task-tmux", null, 80, 24);
+
+    expect(result).toEqual({ ok: true });
+    expect(mockAttachLocalSession.mock.calls[0][5]).toBeNull();
+  });
+
+  it("falls back to project.repoPath when the default-branch task worktreePath does not exist on disk", async () => {
     const task = {
       id: "task-deleted-wt",
       sessionType: "terminal",
       sessionName: "s-deleted",
       sshHost: null,
+      branchName: "main",
       worktreePath: "/workspace/my-repo__worktrees/deleted",
-      project: { repoPath: "/workspace/my-repo" },
+      project: { repoPath: "/workspace/my-repo", defaultBranch: "main" },
     };
     mockFindOne.mockResolvedValue(task);
     mockExistsSync.mockImplementation((p) => p === "/workspace/my-repo");

@@ -73,6 +73,7 @@ vi.mock("@/lib/nativeAgentRuntime", () => ({
 }));
 
 import type { Project } from "@/entities/Project";
+import { persistTaskStateAtPath } from "@/desktop/main/services/kanvibeTaskStateService";
 
 describe("ensureProjectRootTask worktreePath preservation", () => {
   const project = {
@@ -140,6 +141,9 @@ describe("ensureProjectRootTask worktreePath preservation", () => {
       worktreePath: "/workspace/my-project",
     }));
     expect(repaired).toBe(true);
+    // 사라진 경로에 .kanvibe 디렉터리를 다시 만들면 다음 repair가 그 경로를 살아 있다고 오판한다
+    expect(persistTaskStateAtPath).toHaveBeenCalledWith("/workspace/my-project", expect.anything(), null);
+    expect(persistTaskStateAtPath).not.toHaveBeenCalledWith("/workspace/my-project__worktrees/deleted", expect.anything(), expect.anything());
   });
 
   it("updates task.worktreePath to expected worktree path when listWorktrees returns an active worktree for default branch", async () => {

@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import type { WebContents } from "electron";
-import { getProjectRepository, getTaskRepository } from "@/lib/database";
+import { getTaskRepository } from "@/lib/database";
 import { SessionType } from "@/entities/KanbanTask";
 import { attachLocalSession, attachRemoteSession, focusSession } from "@/lib/terminal";
 import { parseSSHConfig, type SSHHostConfig } from "@/lib/sshConfig";
@@ -199,37 +199,26 @@ export async function openTerminal(
   }
 
   const taskRepo = await getTaskRepository();
-  const task = (await taskRepo.findOne?.({
-    where: { id: taskId },
-    relations: ["project"],
-  })) ?? (await taskRepo.findOneBy({ id: taskId }));
+  const task = await taskRepo.findOne({ where: { id: taskId }, relations: ["project"] });
 
   if (!task || !task.sessionType || !task.sessionName) {
     return { ok: false, error: "작업에 연결된 세션이 없습니다." };
   }
 
-  let project = task.project ?? null;
-  if (!project && task.projectId) {
-    try {
-      const projectRepo = await getProjectRepository();
-      project = await projectRepo.findOneBy({ id: task.projectId });
-    } catch {
-      // ignore in tests or mock repos
-    }
-  }
-
-  let cwd: string | null = null;
-  if (task.sshHost) {
-    cwd = resolveTaskWorkingDirectory({ worktreePath: task.worktreePath, project });
-  } else {
-    const candidateCwd = resolveTaskWorkingDirectory({ worktreePath: task.worktreePath, project });
-    if (candidateCwd) {
-      const validation = resolveValidLocalWorkingDirectory({ worktreePath: task.worktreePath, project });
-      if (!validation.ok) {
-        return { ok: false, error: validation.error };
-      }
+  const workingDirectoryContext = {
+    worktreePath: task.worktreePath,
+    branchName: task.branchName,
+    project: task.project,
+  };
+  let cwd = resolveTaskWorkingDirectory(workingDirectoryContext);
+  if (cwd && !task.sshHost) {
+    const validation = resolveValidLocalWorkingDirectory(workingDirectoryContext);
+    if (validation.ok) {
       cwd = validation.cwd;
+    } else if (task.sessionType === SessionType.TERMINAL) {
+      return { ok: false, error: validation.error };
     } else {
+      // tmux/zellij attach는 기존 세션의 cwd를 쓰므로 디렉터리가 없어도 막지 않는다
       cwd = null;
     }
   }

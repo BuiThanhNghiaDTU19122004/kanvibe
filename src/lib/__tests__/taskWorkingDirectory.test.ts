@@ -78,14 +78,27 @@ describe("resolveValidLocalWorkingDirectory", () => {
     });
   });
 
-  it("falls back to project repoPath if worktreePath does not exist on disk", () => {
+  it("falls back to project repoPath for the default-branch task when worktreePath does not exist", () => {
     const result = resolveValidLocalWorkingDirectory({
       worktreePath: "/missing/worktree",
-      project: { repoPath: "/existing/repo" },
+      branchName: "main",
+      project: { repoPath: "/existing/repo", defaultBranch: "main" },
     });
     expect(result).toEqual({
       ok: true,
       cwd: "/existing/repo",
+    });
+  });
+
+  it("does not fall back to repoPath for a feature-branch task whose worktree is gone", () => {
+    const result = resolveValidLocalWorkingDirectory({
+      worktreePath: "/missing/worktree",
+      branchName: "feat/x",
+      project: { repoPath: "/existing/repo", defaultBranch: "main" },
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: "작업 디렉토리가 존재하지 않습니다: /missing/worktree",
     });
   });
 
