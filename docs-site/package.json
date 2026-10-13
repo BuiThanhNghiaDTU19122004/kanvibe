@@ -12,14 +12,14 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "^16.3.6",
+    "next": "^16.4.0",
     "nextra": "^4.6.1",
     "nextra-theme-docs": "^4.6.1",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.20.6",
-    "wrangler": "^4.143.0"
+    "@opennextjs/cloudflare": "^1.20.10",
+    "wrangler": "^4.149.0"
   }
 }

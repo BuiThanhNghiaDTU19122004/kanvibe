@@ -1,1 +1,16 @@
 onlyBuiltDependencies: esbuild
+
+# Pin transitive dependencies to patched releases. Remove an entry once the
+# parent package (nextra / @opennextjs/cloudflare / next) ships the fix itself.
+overrides:
+  "@xmldom/xmldom": ^0.9.12
+  "glob@>=10.2.0 <10.5.0": ^10.5.0
+  "source-map-js@<1.2.2": ^1.2.2
+
+auditConfig:
+  ignoreGhsas:
+    # braces <=3.0.3 stack exhaustion on deeply nested patterns. No patched release
+    # exists yet. It is only reached at build time via nextra > fast-glob > micromatch
+    # with glob patterns written in this repo, never with untrusted input.
+    # Re-check when a fixed braces version is published and drop this entry.
+    - GHSA-vfj7-8cjw-p6xm
