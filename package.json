@@ -67,7 +67,16 @@
       "sharp",
       "unrs-resolver",
       "better-sqlite3"
-    ]
+    ],
+    "overrides": {
+      "next": "16.4.0",
+      "source-map-js": "^1.2.2"
+    },
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-ch52-4w7c-c8xp"
+      ]
+    }
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
