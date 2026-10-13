@@ -221,6 +221,9 @@ contextBridge.exposeInMainWorld("kanvibeDesktop", {
   notifyShortcutCaptureChanged(isCapturing) {
     ipcRenderer.send("kanvibe:shortcut-capture-changed", Boolean(isCapturing));
   },
+  notifyTerminalFocusChanged(isFocused) {
+    ipcRenderer.send("kanvibe:terminal-focus-changed", Boolean(isFocused));
+  },
   updateTitleBarOverlay(resolvedTheme) {
     ipcRenderer.send("kanvibe:update-title-bar-overlay", resolvedTheme);
   },

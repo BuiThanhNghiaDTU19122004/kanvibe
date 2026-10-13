@@ -22,6 +22,7 @@ const {
   mockCloseTerminal,
   mockPasteImageToRemoteTerminal,
   mockReadClipboardImage,
+  mockWriteSystemClipboard,
   mockTerminalFocus,
   mockDisposeMacShiftSelectionPatch,
   mockFit,
@@ -35,6 +36,7 @@ const {
   mockCloseTerminal: vi.fn(),
   mockPasteImageToRemoteTerminal: vi.fn(),
   mockReadClipboardImage: vi.fn(),
+  mockWriteSystemClipboard: vi.fn(),
   mockTerminalFocus: vi.fn(),
   mockDisposeMacShiftSelectionPatch: vi.fn(),
   mockFit: vi.fn(),
@@ -60,6 +62,9 @@ class MockXTerm {
   onData = vi.fn();
   onResize = vi.fn();
   attachCustomKeyEventHandler = vi.fn();
+  hasSelection = vi.fn(() => false);
+  getSelection = vi.fn(() => "");
+  clearSelection = vi.fn();
   parser = { registerOscHandler: vi.fn().mockReturnValue({ dispose: vi.fn() }) };
 
   constructor() {
@@ -176,6 +181,7 @@ describe("Desktop Terminal", () => {
       closeTerminal: mockCloseTerminal,
       pasteImageToRemoteTerminal: mockPasteImageToRemoteTerminal,
       readClipboardImage: mockReadClipboardImage,
+      writeSystemClipboard: mockWriteSystemClipboard,
     };
   });
 
@@ -391,7 +397,7 @@ describe("Desktop Terminal", () => {
     });
   });
 
-  it("원격 세션에서 Ctrl+V 시 클립보드에 이미지가 없으면 xterm 기본 처리를 그대로 둔다 (vim 비주얼 블록 등 회귀 방지)", async () => {
+  it("원격 세션에서 Ctrl+V 시 클립보드에 이미지가 없으면 ^V 대신 브라우저 기본 붙여넣기로 넘긴다", async () => {
     // Given
     mockReadClipboardImage.mockReturnValue(null);
     render(<Terminal taskId="task-1" isRemote />);
@@ -404,11 +410,11 @@ describe("Desktop Terminal", () => {
     const handled = handler({ type: "keydown", ctrlKey: true, metaKey: false, shiftKey: false, altKey: false, key: "v" });
 
     // Then
-    expect(handled).toBe(true);
+    expect(handled).toBe(false);
     expect(mockPasteImageToRemoteTerminal).not.toHaveBeenCalled();
   });
 
-  it("로컬 세션에서는 Ctrl+V가 이미지가 있어도 가로채지 않는다", async () => {
+  it("로컬 세션에서는 Ctrl+V가 이미지를 읽지 않고 텍스트 붙여넣기로 넘긴다", async () => {
     // Given
     mockReadClipboardImage.mockReturnValue("data:image/png;base64,ZmFrZQ==");
     render(<Terminal taskId="task-1" />);
@@ -421,8 +427,26 @@ describe("Desktop Terminal", () => {
     const handled = handler({ type: "keydown", ctrlKey: true, metaKey: false, shiftKey: false, altKey: false, key: "v" });
 
     // Then
-    expect(handled).toBe(true);
+    expect(handled).toBe(false);
     expect(mockReadClipboardImage).not.toHaveBeenCalled();
+  });
+
+  it("선택 영역이 있을 때만 Ctrl+C가 복사하고, 없으면 ^C로 남긴다", async () => {
+    render(<Terminal taskId="task-1" />);
+    await waitFor(() => {
+      expect(mockOpenTerminal).toHaveBeenCalledWith("task-1", null, 80, 24);
+    });
+    const handler = getRegisteredKeyEventHandler();
+    const xterm = latestXtermInstance!;
+    const ctrlC = { type: "keydown", ctrlKey: true, metaKey: false, shiftKey: false, altKey: false, key: "c", preventDefault: vi.fn() };
+
+    expect(handler(ctrlC)).toBe(true);
+
+    xterm.hasSelection.mockReturnValue(true);
+    xterm.getSelection.mockReturnValue("selected text");
+    expect(handler(ctrlC)).toBe(false);
+    expect(mockWriteSystemClipboard).toHaveBeenCalledWith("selected text");
+    expect(xterm.clearSelection).toHaveBeenCalled();
   });
 
   it("원격 세션에서 Ctrl+Shift+V와 Shift+Insert도 이미지 붙여넣기를 트리거한다", async () => {

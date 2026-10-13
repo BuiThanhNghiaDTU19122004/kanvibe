@@ -48,15 +48,29 @@ export function identifyAgentProcess(item: WindowsProcess): AiSessionProvider | 
 async function readProcesses(): Promise<WindowsProcess[]> {
   const options = { windowsHide: true, timeout: 8_000, maxBuffer: 8 * 1024 * 1024, env: createLocalShellEnvironment() };
   const result = await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
-    "[Console]::OutputEncoding = [Text.Encoding]::UTF8; @(Get-CimInstance Win32_Process -ErrorAction Stop | Select-Object ProcessId,ParentProcessId,Name,CommandLine) | ConvertTo-Json -Compress"],
+    // Only node.exe needs its command line (see identifyAgentProcess); skipping the rest keeps the JSON small.
+    "[Console]::OutputEncoding = [Text.Encoding]::UTF8; @(Get-CimInstance Win32_Process -ErrorAction Stop | Select-Object ProcessId,ParentProcessId,Name,@{n='CommandLine';e={if ($_.Name -eq 'node.exe') { $_.CommandLine }}}) | ConvertTo-Json -Compress"],
   options).catch(() => execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", WINDOWS_PROCESS_QUERY], options));
   const parsed: WindowsProcess[] | WindowsProcess = JSON.parse(result.stdout.trim() || "[]");
   return Array.isArray(parsed) ? parsed : [parsed];
 }
 
 let monitorRead: Promise<AgentMonitor> | null = null;
-export function readNativeAgentMonitor(): Promise<AgentMonitor> {
-  if (!monitorRead) monitorRead = readMonitor().finally(() => { monitorRead = null; });
+let lastMonitor: { monitor: AgentMonitor; finishedAt: number } | null = null;
+
+/**
+ * A process scan spawns PowerShell and walks every process, so pollers that only need panes
+ * can pass `maxAgeMs` to reuse a recent scan instead of starting another one.
+ */
+export function readNativeAgentMonitor(maxAgeMs = 0): Promise<AgentMonitor> {
+  if (maxAgeMs > 0 && lastMonitor && Date.now() - lastMonitor.finishedAt <= maxAgeMs) {
+    return Promise.resolve(lastMonitor.monitor);
+  }
+  if (!monitorRead) {
+    monitorRead = readMonitor()
+      .then((monitor) => { lastMonitor = { monitor, finishedAt: Date.now() }; return monitor; })
+      .finally(() => { monitorRead = null; });
+  }
   return monitorRead;
 }
 

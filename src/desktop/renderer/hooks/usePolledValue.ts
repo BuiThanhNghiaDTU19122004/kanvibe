@@ -8,12 +8,26 @@ import { useIsWindowActive } from "@/desktop/renderer/hooks/useIsWindowActive";
  * 창이 가려져 있으면 주기 조회는 멈추되 첫 조회는 한 번 한다.
  * 그래야 창이 다시 앞으로 나왔을 때 빈 화면부터 보여주지 않는다.
  */
+function isSameValue<T>(left: T, right: T): boolean {
+  if (Object.is(left, right)) {
+    return true;
+  }
+
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
+}
+
 export function usePolledResource<T>(
   read: () => Promise<T>,
   emptyValue: T,
   intervalMs: number,
   isEnabled: boolean,
+  options: { keepStateWhenUnchanged?: boolean } = {},
 ) {
+  const { keepStateWhenUnchanged = false } = options;
   const [resource, setResource] = useState({ value: emptyValue, error: false, updatedAt: null as string | null });
   const [retryKey, setRetryKey] = useState(0);
   const retry = useCallback(() => setRetryKey((key) => key + 1), []);
@@ -36,7 +50,11 @@ export function usePolledResource<T>(
       try {
         const nextValue = await read();
         if (!isCancelled) {
-          setResource({ value: nextValue, error: false, updatedAt: new Date().toISOString() });
+          setResource((current) => (
+            keepStateWhenUnchanged && !current.error && isSameValue(current.value, nextValue)
+              ? current
+              : { value: nextValue, error: false, updatedAt: new Date().toISOString() }
+          ));
         }
       } catch {
         if (!isCancelled) setResource((current) => ({ ...current, error: true }));
@@ -61,11 +79,15 @@ export function usePolledResource<T>(
       isCancelled = true;
       window.clearInterval(pollIntervalId);
     };
-  }, [intervalMs, isEnabled, isWindowActive, read, retryKey]);
+  }, [intervalMs, isEnabled, isWindowActive, keepStateWhenUnchanged, read, retryKey]);
 
   return { ...resource, retry };
 }
 
+/**
+ * 값만 쓰는 폴링이라 마지막 확인 시각(updatedAt)이 필요 없다.
+ * 결과가 그대로면 상태를 갈아끼우지 않아, 주기마다 부모까지 다시 그리는 일을 피한다.
+ */
 export function usePolledValue<T>(read: () => Promise<T>, emptyValue: T, intervalMs: number, isEnabled: boolean): T {
-  return usePolledResource(read, emptyValue, intervalMs, isEnabled).value;
+  return usePolledResource(read, emptyValue, intervalMs, isEnabled, { keepStateWhenUnchanged: true }).value;
 }
