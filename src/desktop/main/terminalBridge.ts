@@ -14,6 +14,11 @@ import type { AiSessionProvider } from "@/lib/aiSessions/types";
 const OPEN = 1;
 const CLOSED = 3;
 
+/** 이 시간 안에 연달아 도착한 PTY chunk는 IPC 한 건으로 합친다 */
+const TERMINAL_COALESCE_WINDOW_MS = 8;
+/** 합친 데이터가 이 크기를 넘으면 창이 끝나기를 기다리지 않고 바로 보낸다 */
+const TERMINAL_COALESCE_MAX_CHARS = 64 * 1024;
+
 class ElectronTerminalClient extends EventEmitter {
   readonly OPEN = OPEN;
   readyState = OPEN;
@@ -32,21 +37,71 @@ class ElectronTerminalClient extends EventEmitter {
     super();
   }
 
+  private pendingData = "";
+  private coalesceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * PTY 출력을 IPC 한 건씩 보내지 않고 짧은 창 안에서 모아 보낸다.
+   * 에이전트 TUI는 작은 chunk를 초당 수천 번 쏟아내는데, 그때마다 IPC 직렬화와 렌더러 이벤트가 생기면 둘 다 밀린다.
+   * 유휴 상태의 첫 chunk는 바로 보내서 키 입력 echo 지연은 늘리지 않는다.
+   */
   send(data: string | Buffer) {
     if (this.readyState !== OPEN || this.webContents.isDestroyed()) {
+      return;
+    }
+
+    this.pendingData += typeof data === "string" ? data : data.toString();
+
+    if (this.coalesceTimer === null) {
+      this.flushPendingData();
+      this.coalesceTimer = setTimeout(this.handleCoalesceWindowEnd, TERMINAL_COALESCE_WINDOW_MS);
+      return;
+    }
+
+    if (this.pendingData.length >= TERMINAL_COALESCE_MAX_CHARS) {
+      this.flushPendingData();
+    }
+  }
+
+  private readonly handleCoalesceWindowEnd = () => {
+    this.coalesceTimer = null;
+    if (this.pendingData.length === 0) {
+      return;
+    }
+
+    this.flushPendingData();
+    this.coalesceTimer = setTimeout(this.handleCoalesceWindowEnd, TERMINAL_COALESCE_WINDOW_MS);
+  };
+
+  private flushPendingData() {
+    if (this.pendingData.length === 0) {
+      return;
+    }
+
+    const data = this.pendingData;
+    this.pendingData = "";
+
+    if (this.webContents.isDestroyed()) {
       return;
     }
 
     this.webContents.send("kanvibe:terminal-data", {
       taskId: this.taskId,
       tabId: this.tabId,
-      data: typeof data === "string" ? data : data.toString(),
+      data,
     });
   }
 
   close(_code?: number, reason?: string) {
     if (this.readyState !== OPEN) {
       return;
+    }
+
+    /** close 이벤트가 마지막 출력을 앞질러 가지 않도록 남은 데이터를 먼저 내보낸다 */
+    this.flushPendingData();
+    if (this.coalesceTimer !== null) {
+      clearTimeout(this.coalesceTimer);
+      this.coalesceTimer = null;
     }
 
     this.readyState = CLOSED;
