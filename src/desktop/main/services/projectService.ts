@@ -24,8 +24,10 @@ import type {
   RunningAgentPane,
 } from "@/lib/aiSessions/types";
 import { homedir } from "os";
+import { existsSync } from "fs";
 import { listLocalDirectories } from "@/lib/localDirectories";
 import path from "path";
+import { resolveTaskWorkingDirectory } from "@/lib/taskWorkingDirectory";
 import { computeProjectColor } from "@/lib/projectColor";
 import { DUPLICATE_PROJECT_NAME_ERROR, resolveUniqueProjectName } from "@/lib/projectName";
 import { resolveProjectIconDataUrl } from "@/lib/githubProjectIcon";
@@ -301,7 +303,7 @@ async function areProjectRootHooksInstalled(project: Project, taskId: string): P
     && openCodeStatus.installed;
 }
 
-async function ensureProjectRootTask(
+export async function ensureProjectRootTask(
   project: Project,
   options?: {
     repairHooks?: boolean;
@@ -330,12 +332,13 @@ async function ensureProjectRootTask(
   }
 
   const expectedDefaultBranchWorktreePath = await resolveProjectDefaultBranchWorktreePath(project);
+  const activeWorktreePath = expectedDefaultBranchWorktreePath || task.worktreePath || project.repoPath;
   const {
     status: persistedStatus,
     description: persistedDescription,
     projectPriority: persistedProjectPriority,
   } = await readPersistedTaskSyncState(
-    expectedDefaultBranchWorktreePath || project.repoPath,
+    activeWorktreePath,
     project.sshHost,
     project.repoPath,
   );
@@ -346,9 +349,20 @@ async function ensureProjectRootTask(
     shouldSaveTask = true;
   }
 
-  if ((task.worktreePath ?? null) !== expectedDefaultBranchWorktreePath) {
-    task.worktreePath = expectedDefaultBranchWorktreePath;
-    shouldSaveTask = true;
+  if (expectedDefaultBranchWorktreePath) {
+    if (task.worktreePath !== expectedDefaultBranchWorktreePath) {
+      task.worktreePath = expectedDefaultBranchWorktreePath;
+      shouldSaveTask = true;
+    }
+  } else if (task.worktreePath) {
+    const isPathAlive = project.sshHost ? true : existsSync(task.worktreePath);
+    if (!isPathAlive) {
+      const fallbackPath = (!project.sshHost && existsSync(project.repoPath)) ? project.repoPath : null;
+      if (task.worktreePath !== fallbackPath) {
+        task.worktreePath = fallbackPath;
+        shouldSaveTask = true;
+      }
+    }
   }
 
   if (task.sshHost !== project.sshHost) {
@@ -376,7 +390,7 @@ async function ensureProjectRootTask(
     repaired = true;
   }
 
-  await persistTaskState(expectedDefaultBranchWorktreePath || project.repoPath, task, project.sshHost);
+  await persistTaskState(activeWorktreePath, task, project.sshHost);
 
   if (!repairHooks) {
     return { task, repaired };
@@ -413,7 +427,7 @@ async function resolveTaskHookTarget(task: {
     return null;
   }
 
-  const targetPath = task.worktreePath || task.project.repoPath;
+  const targetPath = resolveTaskWorkingDirectory(task) || task.project.repoPath;
   if (targetPath !== task.project.repoPath || !isDefaultBranchTask(task, task.project.defaultBranch)) {
     return {
       targetPath,
@@ -1372,7 +1386,7 @@ export async function getTaskAiSessions(
   }
 
   return aggregateAiSessions({
-    worktreePath: task.worktreePath || task.project.repoPath,
+    worktreePath: resolveTaskWorkingDirectory(task) || task.project.repoPath,
     repoPath: task.project.repoPath,
     query,
     cursor,
@@ -1401,7 +1415,7 @@ export async function getTaskAiSessionDetail(
     return null;
   }
 
-  const targetPath = task.worktreePath || task.project.repoPath;
+  const targetPath = resolveTaskWorkingDirectory(task) || task.project.repoPath;
   return getAiSessionDetail(
     {
       worktreePath: targetPath,
@@ -1440,7 +1454,7 @@ export async function getTaskLiveAiSessions(taskId: string): Promise<LiveAiSessi
     taskId,
     isRemote: Boolean(task.project.sshHost),
     sessions: await readLiveAiSessions({
-      worktreePath: task.worktreePath || task.project.repoPath,
+      worktreePath: resolveTaskWorkingDirectory(task) || task.project.repoPath,
       repoPath: task.project.repoPath,
       sshHost: task.project.sshHost,
     }, !task.project.sshHost && process.platform === "win32" ? (await readNativeAgentMonitor(LIVE_SESSION_MONITOR_MAX_AGE_MS)).panes : undefined),
@@ -1480,7 +1494,7 @@ export async function getTaskAgentCallGraph(
   }
 
   return readAgentCallGraph({
-    worktreePath: task.worktreePath || task.project.repoPath,
+    worktreePath: resolveTaskWorkingDirectory(task) || task.project.repoPath,
     repoPath: task.project.repoPath,
     sshHost: task.project.sshHost,
   }, provider, sessionId);

@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import type { WebContents } from "electron";
-import { getTaskRepository } from "@/lib/database";
+import { getProjectRepository, getTaskRepository } from "@/lib/database";
 import { SessionType } from "@/entities/KanbanTask";
 import { attachLocalSession, attachRemoteSession, focusSession } from "@/lib/terminal";
 import { parseSSHConfig, type SSHHostConfig } from "@/lib/sshConfig";
@@ -10,6 +10,7 @@ import { decodeDataUrlToBuffer, transferImageToRemoteHost } from "@/lib/remoteIm
 import { launchNativeAgent } from "@/lib/nativeAgentRuntime";
 import type { AgentLaunchResult } from "@/desktop/shared/agentRuntime";
 import type { AiSessionProvider } from "@/lib/aiSessions/types";
+import { resolveTaskWorkingDirectory, resolveValidLocalWorkingDirectory } from "@/lib/taskWorkingDirectory";
 
 const OPEN = 1;
 const CLOSED = 3;
@@ -198,10 +199,39 @@ export async function openTerminal(
   }
 
   const taskRepo = await getTaskRepository();
-  const task = await taskRepo.findOneBy({ id: taskId });
+  const task = (await taskRepo.findOne?.({
+    where: { id: taskId },
+    relations: ["project"],
+  })) ?? (await taskRepo.findOneBy({ id: taskId }));
 
   if (!task || !task.sessionType || !task.sessionName) {
     return { ok: false, error: "작업에 연결된 세션이 없습니다." };
+  }
+
+  let project = task.project ?? null;
+  if (!project && task.projectId) {
+    try {
+      const projectRepo = await getProjectRepository();
+      project = await projectRepo.findOneBy({ id: task.projectId });
+    } catch {
+      // ignore in tests or mock repos
+    }
+  }
+
+  let cwd: string | null = null;
+  if (task.sshHost) {
+    cwd = resolveTaskWorkingDirectory({ worktreePath: task.worktreePath, project });
+  } else {
+    const candidateCwd = resolveTaskWorkingDirectory({ worktreePath: task.worktreePath, project });
+    if (candidateCwd) {
+      const validation = resolveValidLocalWorkingDirectory({ worktreePath: task.worktreePath, project });
+      if (!validation.ok) {
+        return { ok: false, error: validation.error };
+      }
+      cwd = validation.cwd;
+    } else {
+      cwd = null;
+    }
   }
 
   const client = new ElectronTerminalClient(webContents, taskId, tabId);
@@ -237,7 +267,7 @@ export async function openTerminal(
         resolved.sshConfig,
         cols,
         rows,
-        task.worktreePath,
+        cwd,
         tmuxPaneLayout,
       );
     } else {
@@ -247,7 +277,7 @@ export async function openTerminal(
         task.sessionType as SessionType,
         task.sessionName,
         client as never,
-        task.worktreePath,
+        cwd,
         cols,
         rows,
         tmuxPaneLayout,

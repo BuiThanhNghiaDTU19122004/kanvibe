@@ -459,7 +459,7 @@ interface LocalPtySpawnPlan {
  * tmux는 이미 만들어 둔 세션에 attach하고, zellij는 세션이 없으면 생성까지 겸하며,
  * terminal은 멀티플렉서 없이 로그인 셸을 바로 띄운다.
  */
-function buildLocalPtySpawnPlan(
+export function buildLocalPtySpawnPlan(
   sessionType: SessionType,
   sessionName: string,
   cwd: string | null | undefined,
@@ -472,11 +472,11 @@ function buildLocalPtySpawnPlan(
   }
 
   if (sessionType === SessionType.TMUX) {
-    return { shell: "tmux", args: ["attach-session", "-t", sessionName], cwd: homeDirectory };
+    return { shell: "tmux", args: ["attach-session", "-t", sessionName], cwd: cwd || homeDirectory };
   }
 
   if (!zellijNeedsCreation) {
-    return { shell: "zellij", args: ["attach", sessionName], cwd: homeDirectory };
+    return { shell: "zellij", args: ["attach", sessionName], cwd: cwd || homeDirectory };
   }
 
   /** 세션이 없으면 --session으로 생성과 attach를 동시에 처리한다 */
