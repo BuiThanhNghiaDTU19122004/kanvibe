@@ -82,6 +82,7 @@ describe("TaskQuickSearchDialog", () => {
         projectName: "api-server",
         sshHost: "devbox",
         status: "progress",
+        hasTerminal: true,
         updatedAt: "2026-04-30T01:00:00.000Z",
       },
       {
@@ -222,7 +223,8 @@ describe("TaskQuickSearchDialog", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/en/task/task-remote");
+      // Tasks with a terminal session open straight on the terminal view
+      expect(mocks.push).toHaveBeenCalledWith("/en/task/task-remote?view=terminal");
     });
   });
 
@@ -267,7 +269,8 @@ describe("TaskQuickSearchDialog", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     await waitFor(() => {
-      expect(mocks.push).toHaveBeenCalledWith("/en/task/task-remote");
+      // Tasks with a terminal session open straight on the terminal view
+      expect(mocks.push).toHaveBeenCalledWith("/en/task/task-remote?view=terminal");
     });
     await waitFor(() => {
       expect(focusListener).toHaveBeenCalled();

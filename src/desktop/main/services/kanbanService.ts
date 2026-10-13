@@ -48,6 +48,8 @@ export interface SearchableTask {
   sshHost: string | null;
   status: TaskStatus;
   updatedAt: Date;
+  /** Quick search opens these straight on the terminal view */
+  hasTerminal: boolean;
 }
 
 const DONE_PAGE_SIZE = 20;
@@ -484,6 +486,7 @@ export async function getSearchableTasks(): Promise<SearchableTask[]> {
     sshHost: task.sshHost ?? task.project?.sshHost ?? null,
     status: task.status,
     updatedAt: task.updatedAt,
+    hasTerminal: Boolean(task.sessionType && task.sessionName),
   })));
 }
 

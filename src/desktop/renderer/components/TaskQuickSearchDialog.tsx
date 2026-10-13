@@ -330,9 +330,11 @@ export default function TaskQuickSearchDialog({
   }
 
   async function moveToTask(taskId: string) {
+    const hasTerminal = tasks.some((task) => task.id === taskId && task.hasTerminal);
     await navigateToTaskDetail(taskId, {
       currentLocale: getCurrentLocale(),
       navigate: router.push,
+      searchParams: hasTerminal ? "view=terminal" : undefined,
     });
     closeDialog();
   }
