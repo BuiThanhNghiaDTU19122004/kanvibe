@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import "@xterm/xterm/css/xterm.css";
 import { createTerminalOptions, installMacShiftSelectionPatch } from "@/lib/terminalMouseSelection";
 import { installOsc52ClipboardHandler } from "@/lib/terminalClipboard";
+import { getCurrentShortcutPlatform, resolveTerminalClipboardKey } from "@/desktop/renderer/utils/keyboardShortcut";
 import { REQUEST_ACTIVE_TERMINAL_FOCUS_EVENT, hasTerminalFocusBlocker } from "@/desktop/renderer/utils/terminalFocus";
 
 interface TerminalProps {
@@ -105,6 +106,16 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
     terminal.open(containerRef.current);
     const disposeMacShiftSelectionPatch = installMacShiftSelectionPatch(terminal);
     const osc52ClipboardHandler = installOsc52ClipboardHandler(terminal);
+    /** Electron main must know when xterm has focus so Ctrl+<letter> reaches the shell instead of app shortcuts */
+    const handleTerminalFocus = () => window.kanvibeDesktop?.notifyTerminalFocusChanged?.(true);
+    const handleTerminalBlur = () => window.kanvibeDesktop?.notifyTerminalFocusChanged?.(false);
+    terminal.textarea?.addEventListener("focus", handleTerminalFocus);
+    terminal.textarea?.addEventListener("blur", handleTerminalBlur);
+    const disposeTerminalFocusTracking = () => {
+      terminal.textarea?.removeEventListener("focus", handleTerminalFocus);
+      terminal.textarea?.removeEventListener("blur", handleTerminalBlur);
+      if (document.activeElement === terminal.textarea) handleTerminalBlur();
+    };
     terminal.options.fontFamily = FALLBACK_FONT_FAMILY;
 
     /**
@@ -186,6 +197,14 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
         return true;
       }
 
+      const clipboardKey = resolveTerminalClipboardKey(event, terminal.hasSelection(), getCurrentShortcutPlatform());
+      if (clipboardKey === "copy") {
+        void window.kanvibeDesktop!.writeSystemClipboard(terminal.getSelection());
+        terminal.clearSelection();
+        event.preventDefault();
+        return false;
+      }
+
       const isCtrlV = event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "v";
       const isCtrlShiftV = event.ctrlKey && !event.metaKey && event.shiftKey && !event.altKey && event.key.toLowerCase() === "v";
       const isShiftInsert = event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && event.key === "Insert";
@@ -194,7 +213,12 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
         return true;
       }
 
-      return !tryHandleImagePasteShortcut();
+      if (tryHandleImagePasteShortcut()) {
+        return false;
+      }
+
+      /** Skipping xterm keeps Ctrl+V from becoming ^V; the browser then fires a native paste that xterm pastes (bracketed) */
+      return clipboardKey !== "paste";
     });
 
     /** X11 중간 클릭 붙여넣기 관례를 macOS에서도 받아 주기 위한 트리거. 이 저장소에 기존 중간 클릭 처리는 없다 */
@@ -267,7 +291,7 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
       return () => {
         isTerminalDisposed = true;
         disposeMacShiftSelectionPatch();
-        osc52ClipboardHandler.dispose();
+        osc52ClipboardHandler.dispose(); disposeTerminalFocusTracking();
         pasteEventTarget.removeEventListener("paste", handlePaste, true);
         pasteEventTarget.removeEventListener("auxclick", handleAuxClick);
         unsubscribeData();
@@ -326,7 +350,7 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
       window.removeEventListener("focus", handleWindowFocus);
       window.removeEventListener(REQUEST_ACTIVE_TERMINAL_FOCUS_EVENT, handleRequestTerminalFocus);
       disposeMacShiftSelectionPatch();
-      osc52ClipboardHandler.dispose();
+      osc52ClipboardHandler.dispose(); disposeTerminalFocusTracking();
       pasteEventTarget.removeEventListener("paste", handlePaste, true);
       pasteEventTarget.removeEventListener("auxclick", handleAuxClick);
       resizeObserver.disconnect();

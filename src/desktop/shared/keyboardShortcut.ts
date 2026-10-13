@@ -287,6 +287,54 @@ export function matchShortcutEvent(
     && modifierState.shiftKey === requiresShift;
 }
 
+const TERMINAL_CONTROL_KEY_PATTERN = /^[a-z[\\\]^_]$/i;
+
+/**
+ * Mod is Ctrl off macOS, so Mod+<letter> collides with control characters (^R, ^W, ^[ = Esc …)
+ * that shells and agent CLIs need. While a terminal has focus these keys belong to the terminal.
+ */
+export function isTerminalControlKeyEvent(event: ShortcutInput, platform: ShortcutPlatformInput): boolean {
+  return normalizeShortcutPlatform(platform) === "linux"
+    && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey
+    && TERMINAL_CONTROL_KEY_PATTERN.test(event.key);
+}
+
+export function isTerminalControlElectronInput(input: ElectronShortcutInput, platform: ShortcutPlatformInput): boolean {
+  return isTerminalControlKeyEvent({
+    key: input.key,
+    metaKey: Boolean(input.meta),
+    ctrlKey: Boolean(input.control),
+    altKey: Boolean(input.alt),
+    shiftKey: Boolean(input.shift),
+  }, platform);
+}
+
+/**
+ * Windows Terminal style clipboard keys off macOS: Ctrl+C copies only while text is selected
+ * (otherwise it stays SIGINT), Ctrl+V pastes. macOS already copies/pastes with Cmd+C/V.
+ */
+export function resolveTerminalClipboardKey(
+  event: ShortcutInput,
+  hasSelection: boolean,
+  platform: ShortcutPlatformInput,
+): "copy" | "paste" | null {
+  if (!isTerminalControlKeyEvent(event, platform)) {
+    return null;
+  }
+
+  const key = event.key.toLowerCase();
+  if (key === "c" && hasSelection) {
+    return "copy";
+  }
+
+  return key === "v" ? "paste" : null;
+}
+
+/** xterm keeps focus on a helper textarea inside its `.xterm` root */
+export function isTerminalEventTarget(target: EventTarget | null | undefined): boolean {
+  return typeof Element !== "undefined" && target instanceof Element && target.closest(".xterm") !== null;
+}
+
 export function matchElectronShortcutInput(
   input: ElectronShortcutInput,
   shortcut: ShortcutDefinition,
@@ -327,9 +375,13 @@ export function isTaskDetailRouteUrl(url: string | null | undefined): boolean {
 }
 
 export function isBlockedShortcutEvent(
-  event: ShortcutInput,
+  event: ShortcutInput & { target?: EventTarget | null },
   platform: ShortcutPlatformInput,
 ): boolean {
+  if (isTerminalEventTarget(event.target) && isTerminalControlKeyEvent(event, platform)) {
+    return false;
+  }
+
   return Object.values(BLOCKED_DESKTOP_SHORTCUTS).some((shortcut) => (
     matchShortcutEvent(event, shortcut, platform)
   ));

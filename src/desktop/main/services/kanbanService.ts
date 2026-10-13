@@ -3,6 +3,7 @@ import { getTaskRepository } from "@/lib/database";
 import { KanbanTask, TaskStatus, SessionType } from "@/entities/KanbanTask";
 import type { Project } from "@/entities/Project";
 import { TaskPriority } from "@/entities/TaskPriority";
+import { resolveTaskWorkingDirectory } from "@/lib/taskWorkingDirectory";
 import { createWorktreeWithSession, removeWorktreeAndBranch, createSessionWithoutWorktree, removeSessionOnly, formatProjectBranchSessionName } from "@/lib/worktree";
 import { getProjectRepository } from "@/lib/database";
 import {
@@ -900,7 +901,7 @@ export async function connectTerminalSession(
   const project = await projectRepo.findOneBy({ id: task.projectId });
   if (!project) return null;
 
-  const workingDir = task.worktreePath || project.repoPath;
+  const workingDir = resolveTaskWorkingDirectory({ worktreePath: task.worktreePath, project }) || project.repoPath;
 
   try {
     await installTaskHookFilesBeforeTerminalAttach(workingDir, {

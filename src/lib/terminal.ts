@@ -34,6 +34,20 @@ interface TerminalEntry {
   taskId: string;
   tabId: string | null;
   worktreePath?: string | null;
+  /** terminal 세션만 채운다. 클라이언트가 없는 동안의 출력을 재접속 때 다시 보여주기 위한 최근 출력 */
+  replay?: string;
+}
+
+/** shortcut: raw output ring buffer, not a screen model; alt-screen TUIs rely on the resize nudge to redraw. Upgrade to @xterm/headless + serialize if replay looks wrong. */
+const REPLAY_LIMIT_CHARS = 512 * 1024;
+
+export function appendReplay(replay: string, data: string, limit = REPLAY_LIMIT_CHARS): string {
+  const next = replay + data;
+  if (next.length <= limit) return next;
+  const trimmed = next.slice(next.length - limit);
+  // Start at a line boundary so replay does not begin inside an escape sequence
+  const lineStart = trimmed.indexOf("\n");
+  return lineStart === -1 ? trimmed : trimmed.slice(lineStart + 1);
 }
 
 const activeTerminals = new Map<string, TerminalEntry>();
@@ -192,7 +206,14 @@ export function killAllTerminalSessions(): void {
 
 /** WebSocket 하나를 기존 PTY에 연결한다. 같은 PTY를 여러 창이 공유할 수 있다 */
 function attachClientToEntry(terminalKey: string, entry: TerminalEntry, ws: WebSocket): void {
+  // Synchronous send + add: no PTY output can land between snapshot and live stream
+  if (entry.replay && ws.readyState === ws.OPEN) {
+    ws.send(entry.replay);
+  }
   entry.clients.add(ws);
+  if (entry.replay) {
+    nudgeRedraw(entry.pty);
+  }
 
   ws.on("message", (message) => {
     handleTerminalMessage(entry.pty, message.toString());
@@ -202,6 +223,18 @@ function attachClientToEntry(terminalKey: string, entry: TerminalEntry, ws: WebS
     debugLog("ws.close 발생", { terminalKey, remainingClients: entry.clients.size - 1 });
     releaseTerminalClient(terminalKey, ws, "ws-close");
   });
+}
+
+/** Same-size reattach sends no SIGWINCH, so full-screen programs would never repaint */
+function nudgeRedraw(pty: import("node-pty").IPty): void {
+  const { cols, rows } = pty;
+  if (!cols || cols < 2 || !rows) return;
+  try {
+    pty.resize(cols - 1, rows);
+    pty.resize(cols, rows);
+  } catch {
+    // PTY already exited
+  }
 }
 
 /**
@@ -272,6 +305,9 @@ function registerTerminalEntry(
     if (!firstDataLogged) {
       firstDataLogged = true;
       debugLog(`${debugLabel} PTY 첫 데이터 수신`, { terminalKey, sample: data.slice(0, 200) });
+    }
+    if (entry.replay !== undefined) {
+      entry.replay = appendReplay(entry.replay, data);
     }
     for (const client of entry.clients) {
       if (client.readyState === client.OPEN) {
@@ -459,7 +495,7 @@ interface LocalPtySpawnPlan {
  * tmux는 이미 만들어 둔 세션에 attach하고, zellij는 세션이 없으면 생성까지 겸하며,
  * terminal은 멀티플렉서 없이 로그인 셸을 바로 띄운다.
  */
-function buildLocalPtySpawnPlan(
+export function buildLocalPtySpawnPlan(
   sessionType: SessionType,
   sessionName: string,
   cwd: string | null | undefined,
@@ -472,11 +508,11 @@ function buildLocalPtySpawnPlan(
   }
 
   if (sessionType === SessionType.TMUX) {
-    return { shell: "tmux", args: ["attach-session", "-t", sessionName], cwd: homeDirectory };
+    return { shell: "tmux", args: ["attach-session", "-t", sessionName], cwd: cwd || homeDirectory };
   }
 
   if (!zellijNeedsCreation) {
-    return { shell: "zellij", args: ["attach", sessionName], cwd: homeDirectory };
+    return { shell: "zellij", args: ["attach", sessionName], cwd: cwd || homeDirectory };
   }
 
   /** 세션이 없으면 --session으로 생성과 attach를 동시에 처리한다 */
@@ -572,7 +608,8 @@ export async function attachLocalSession(
 
   registerTerminalEntry(
     terminalKey,
-    { pty: ptyProcess, clients: new Set([ws]), sessionType, sessionName, taskId, tabId, worktreePath: cwd },
+    { pty: ptyProcess, clients: new Set([ws]), sessionType, sessionName, taskId, tabId, worktreePath: cwd,
+      replay: shouldSurviveWithoutClients(sessionType) ? "" : undefined },
     ws,
     "Local",
   );

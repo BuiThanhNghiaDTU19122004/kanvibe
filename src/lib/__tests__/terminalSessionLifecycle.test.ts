@@ -161,6 +161,35 @@ describe("세션 타입별 수명", () => {
   });
 });
 
+describe("terminal 세션 재접속 replay", () => {
+  it("클라이언트가 없던 동안의 출력을 재접속한 클라이언트에 먼저 보내고 다시 그리게 한다", async () => {
+    const { attachLocalSession } = await importTerminalModule();
+    const firstWs = createMockWs();
+    await attachLocalSession("task-1", "task-1-1", SessionType.TERMINAL, "proj", firstWs as never, "/work");
+    const pty = spawnedPtys[0] as SpawnedPtyStub & { cols: number; rows: number };
+    Object.assign(pty, { cols: 80, rows: 24 });
+    const emit = pty.onData.mock.calls[0][0] as (data: string) => void;
+
+    emit("before\r\n");
+    firstWs.triggerClose();
+    emit("while away\r\n");
+
+    const secondWs = createMockWs();
+    await attachLocalSession("task-1", "task-1-1", SessionType.TERMINAL, "proj", secondWs as never, "/work");
+    expect(secondWs.send).toHaveBeenCalledWith("before\r\nwhile away\r\n");
+    expect(pty.resize.mock.calls).toEqual([[79, 24], [80, 24]]);
+
+    emit("live");
+    expect(secondWs.send).toHaveBeenLastCalledWith("live");
+  });
+
+  it("replay 버퍼는 한도를 넘으면 줄 경계부터 최근 출력만 남긴다", async () => {
+    const { appendReplay } = await importTerminalModule();
+    expect(appendReplay("aaaa\nbb", "\ncc", 6)).toBe("bb\ncc");
+    expect(appendReplay("ab", "cd", 6)).toBe("abcd");
+  });
+});
+
 describe("terminal 세션 spawn", () => {
   it("로컬은 로그인 셸을 worktree에서 띄운다", async () => {
     process.env.SHELL = "/bin/zsh";

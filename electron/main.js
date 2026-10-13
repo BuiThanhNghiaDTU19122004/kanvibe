@@ -7,7 +7,7 @@ const os = require("node:os");
 const path = require("node:path");
 const process = require("node:process");
 const { pathToFileURL } = require("node:url");
-const { app, BrowserWindow, clipboard, ipcMain, session } = require("electron");
+const { app, BrowserWindow, Menu, clipboard, ipcMain, session } = require("electron");
 const { createDesktopDiagnostics, resolveDesktopLogPath, serializeErrorForLog } = require("./diagnostics");
 const { applyAppDataDirectoryOverride } = require("./runtimeEnvironment");
 const { acquireSingleInstance } = require("./singleInstance");
@@ -48,6 +48,8 @@ let shortcutBindingHelpers = null;
 let currentShortcutBindings = null;
 /** 단축키를 녹화 중인 창의 webContents id. 녹화 중에는 그 조합을 명령으로 가로채지 않는다 */
 const shortcutCapturingWebContentsIds = new Set();
+/** Windows whose focused element is an xterm; their Ctrl+<letter> input belongs to the terminal */
+const terminalFocusedWebContentsIds = new Set();
 let stopBackgroundTaskSync = null;
 /** 앱 종료 시 KanVibe가 소유한 PTY를 정리한다. 핸들러 등록 시점에 채워진다 */
 let killAllTerminalSessionsOnQuit = null;
@@ -530,10 +532,12 @@ function registerAppWindow(browserWindow) {
    */
   browserWindow.webContents.on("did-navigate", () => {
     shortcutCapturingWebContentsIds.delete(shortcutCapturingWebContentsId);
+    terminalFocusedWebContentsIds.delete(shortcutCapturingWebContentsId);
   });
 
   browserWindow.on("closed", () => {
     shortcutCapturingWebContentsIds.delete(shortcutCapturingWebContentsId);
+    terminalFocusedWebContentsIds.delete(shortcutCapturingWebContentsId);
 
     if (mainWindow === browserWindow) {
       mainWindow = getAvailableWindows()[0] || null;
@@ -753,6 +757,7 @@ function attachWindowHandlers(browserWindow) {
     const {
       getShortcutPlatformFromProcessPlatform,
       isBlockedElectronShortcutInput,
+      isTerminalControlElectronInput,
     } = getKeyboardShortcutHelpers();
     const {
       findShortcutCommandForElectronInput,
@@ -760,6 +765,13 @@ function attachWindowHandlers(browserWindow) {
       resolveTerminalTabCommand,
     } = getShortcutBindingHelpers();
     const shortcutPlatform = getShortcutPlatformFromProcessPlatform(process.platform);
+
+    if (
+      terminalFocusedWebContentsIds.has(browserWindow.webContents.id)
+      && isTerminalControlElectronInput(input, shortcutPlatform)
+    ) {
+      return;
+    }
 
     if (isBlockedElectronShortcutInput(input, shortcutPlatform)) {
       event.preventDefault();
@@ -905,6 +917,14 @@ function registerDesktopHandlers() {
 
   ipcMain.on("kanvibe:shortcut-bindings-changed", () => {
     void refreshShortcutBindings().then(broadcastShortcutBindingsChanged);
+  });
+
+  ipcMain.on("kanvibe:terminal-focus-changed", (event, isFocused) => {
+    if (isFocused) {
+      terminalFocusedWebContentsIds.add(event.sender.id);
+    } else {
+      terminalFocusedWebContentsIds.delete(event.sender.id);
+    }
   });
 
   ipcMain.on("kanvibe:shortcut-capture-changed", (event, isCapturing) => {
@@ -1160,6 +1180,8 @@ async function createMainWindow(target) {
 }
 
 if (acquireSingleInstance(app, () => mainWindow, focusWindow)) app.whenReady().then(async () => {
+  /** The default menu binds Ctrl+R (reload) and Ctrl+W (close); off macOS those keys must reach the terminal */
+  if (process.platform !== "darwin") Menu.setApplicationMenu(null);
   initializeDiagnostics();
   ensureRuntimeEnvironment();
   diagnostics.log("main:startup", {

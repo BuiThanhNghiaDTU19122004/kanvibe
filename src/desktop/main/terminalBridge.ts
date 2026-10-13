@@ -10,6 +10,7 @@ import { decodeDataUrlToBuffer, transferImageToRemoteHost } from "@/lib/remoteIm
 import { launchNativeAgent } from "@/lib/nativeAgentRuntime";
 import type { AgentLaunchResult } from "@/desktop/shared/agentRuntime";
 import type { AiSessionProvider } from "@/lib/aiSessions/types";
+import { resolveTaskWorkingDirectory, resolveValidLocalWorkingDirectory } from "@/lib/taskWorkingDirectory";
 
 const OPEN = 1;
 const CLOSED = 3;
@@ -198,10 +199,28 @@ export async function openTerminal(
   }
 
   const taskRepo = await getTaskRepository();
-  const task = await taskRepo.findOneBy({ id: taskId });
+  const task = await taskRepo.findOne({ where: { id: taskId }, relations: ["project"] });
 
   if (!task || !task.sessionType || !task.sessionName) {
     return { ok: false, error: "작업에 연결된 세션이 없습니다." };
+  }
+
+  const workingDirectoryContext = {
+    worktreePath: task.worktreePath,
+    branchName: task.branchName,
+    project: task.project,
+  };
+  let cwd = resolveTaskWorkingDirectory(workingDirectoryContext);
+  if (cwd && !task.sshHost) {
+    const validation = resolveValidLocalWorkingDirectory(workingDirectoryContext);
+    if (validation.ok) {
+      cwd = validation.cwd;
+    } else if (task.sessionType === SessionType.TERMINAL) {
+      return { ok: false, error: validation.error };
+    } else {
+      // tmux/zellij attach는 기존 세션의 cwd를 쓰므로 디렉터리가 없어도 막지 않는다
+      cwd = null;
+    }
   }
 
   const client = new ElectronTerminalClient(webContents, taskId, tabId);
@@ -237,7 +256,7 @@ export async function openTerminal(
         resolved.sshConfig,
         cols,
         rows,
-        task.worktreePath,
+        cwd,
         tmuxPaneLayout,
       );
     } else {
@@ -247,7 +266,7 @@ export async function openTerminal(
         task.sessionType as SessionType,
         task.sessionName,
         client as never,
-        task.worktreePath,
+        cwd,
         cols,
         rows,
         tmuxPaneLayout,
