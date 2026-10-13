@@ -5,6 +5,8 @@ import {
   canonicalizeShortcutForPlatform,
   createTaskDetailDockShortcut,
   createTerminalTabShortcut,
+  isTerminalControlKeyEvent,
+  isTerminalEventTarget,
   matchElectronShortcutInput,
   matchShortcutEvent,
   type ElectronShortcutInput,
@@ -223,9 +225,13 @@ function findShortcutCommand(
 /** 렌더러 keydown이 어떤 명령인지 판정한다 */
 export function findShortcutCommandForEvent(
   bindings: ShortcutBindings,
-  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">,
+  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey"> & { target?: EventTarget | null },
   platform: ShortcutPlatformInput,
 ): ShortcutCommandId | null {
+  if (isTerminalEventTarget(event.target) && isTerminalControlKeyEvent(event, platform)) {
+    return null;
+  }
+
   return findShortcutCommand(bindings, (shortcut) => matchShortcutEvent(event, shortcut, platform));
 }
 

@@ -19,6 +19,7 @@ interface KanvibeDesktopApi {
   notifyShortcutBindingsChanged?: () => void;
   onShortcutBindingsChanged?: (listener: () => void) => () => void;
   notifyShortcutCaptureChanged?: (isCapturing: boolean) => void;
+  notifyTerminalFocusChanged?: (isFocused: boolean) => void;
   focusExistingInternalRoute?: (route: string) => Promise<boolean>;
   [key: string]: unknown;
 }
