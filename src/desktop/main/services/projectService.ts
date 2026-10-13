@@ -1418,6 +1418,9 @@ export async function getTaskAiSessionDetail(
   );
 }
 
+/** 세션 패널은 2초마다 불리지만 프로세스 전체 스캔은 비싸서, 5초 보드 폴링이 읽어 둔 결과를 재사용한다 */
+const LIVE_SESSION_MONITOR_MAX_AGE_MS = 4_000;
+
 /**
  * 태스크 하나의 실행중 AI 세션과 서브태스크를 조회한다.
  * 보드 카드에 focus를 올렸을 때와 태스크 상세 패널이 열려 있을 때 짧은 주기로 다시 불린다.
@@ -1440,7 +1443,7 @@ export async function getTaskLiveAiSessions(taskId: string): Promise<LiveAiSessi
       worktreePath: task.worktreePath || task.project.repoPath,
       repoPath: task.project.repoPath,
       sshHost: task.project.sshHost,
-    }, !task.project.sshHost && process.platform === "win32" ? (await readNativeAgentMonitor()).panes : undefined),
+    }, !task.project.sshHost && process.platform === "win32" ? (await readNativeAgentMonitor(LIVE_SESSION_MONITOR_MAX_AGE_MS)).panes : undefined),
   };
 }
 

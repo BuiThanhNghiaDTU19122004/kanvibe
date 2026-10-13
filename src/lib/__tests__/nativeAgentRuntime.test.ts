@@ -12,6 +12,17 @@ describe("Windows native agent launch", () => {
     expect(mocks.exec.mock.calls[1][1][3]).toContain("CreateToolhelp32Snapshot");
   });
   beforeEach(() => { vi.resetModules(); vi.clearAllMocks(); vi.useRealTimers(); mocks.terminals.mockReturnValue([{ taskId:"t1",tabId:"tab",pid:100,worktreePath:"D:/project",sessionName:"s",windowName:"tab" }]); mocks.write.mockReturnValue(true); });
+  it("reuses a recent scan for pollers that allow a cached result, but a plain read always rescans", async () => {
+    mocks.exec.mockResolvedValue({stdout:"[]"}); const api=await runtime();
+    await api.readNativeAgentMonitor(); await api.readNativeAgentMonitor(4000); await api.readNativeAgentMonitor(4000);
+    expect(mocks.exec).toHaveBeenCalledTimes(1);
+    await api.readNativeAgentMonitor(); expect(mocks.exec).toHaveBeenCalledTimes(2);
+  });
+  it("rescans once the cached result is older than the allowed age", async () => {
+    vi.useFakeTimers(); mocks.exec.mockResolvedValue({stdout:"[]"}); const api=await runtime();
+    await api.readNativeAgentMonitor(4000); vi.advanceTimersByTime(4001); await api.readNativeAgentMonitor(4000);
+    expect(mocks.exec).toHaveBeenCalledTimes(2);
+  });
   it("detects descendants without confusing words in arbitrary command arguments with agents", async () => {
     const { findDescendantProcesses, identifyAgentProcess } = await runtime();
     const processes=[{ProcessId:101,ParentProcessId:100,Name:"cmd.exe"},{ProcessId:102,ParentProcessId:101,Name:"node.exe",CommandLine:'node "D:/node_modules/@anthropic-ai/claude-code/cli.js"'},{ProcessId:103,ParentProcessId:0,Name:"claude.exe"}];
