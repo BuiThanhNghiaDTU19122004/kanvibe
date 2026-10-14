@@ -290,3 +290,142 @@ describe("단축키 재배정 설정", () => {
     expect(storedSettings.has(SHORTCUT_BINDINGS_KEY)).toBe(false);
   });
 });
+
+describe("보드 화면 선택", () => {
+  it("저장한 값을 그대로 되돌려준다", async () => {
+    // Given
+    const { getBoardView, setBoardView } = await import(
+      "@/desktop/main/services/appSettingsService"
+    );
+
+    // When
+    await setBoardView("kanban");
+
+    // Then
+    expect(await getBoardView()).toBe("kanban");
+
+    // When
+    await setBoardView("dashboard");
+
+    // Then
+    expect(await getBoardView()).toBe("dashboard");
+  });
+
+  it("미설정이거나 모르는 값이면 null을 반환한다", async () => {
+    // Given
+    const { getBoardView } = await import("@/desktop/main/services/appSettingsService");
+
+    // When & Then
+    expect(await getBoardView()).toBeNull();
+
+    storedSettings.set("board_view", "unknown");
+    expect(await getBoardView()).toBeNull();
+  });
+});
+
+describe("보드 프로젝트 필터", () => {
+  it("쉼표 구분 id를 배열로 되돌리고 trim한다", async () => {
+    // Given
+    const { getBoardProjectFilter, setBoardProjectFilter } = await import(
+      "@/desktop/main/services/appSettingsService"
+    );
+
+    // When
+    await setBoardProjectFilter(["project-1", " project-2 ", ""]);
+
+    // Then
+    expect(await getBoardProjectFilter()).toEqual(["project-1", "project-2"]);
+  });
+
+  it("미설정이면 빈 배열을 반환하고 빈 선택은 빈 값으로 저장한다", async () => {
+    // Given
+    const { getBoardProjectFilter, setBoardProjectFilter } = await import(
+      "@/desktop/main/services/appSettingsService"
+    );
+
+    // When & Then
+    expect(await getBoardProjectFilter()).toEqual([]);
+
+    await setBoardProjectFilter([]);
+    expect(await getBoardProjectFilter()).toEqual([]);
+  });
+});
+
+describe("보드 작업 종류 필터", () => {
+  it("저장한 값을 그대로 되돌려준다", async () => {
+    // Given
+    const { getBoardTaskKindFilter, setBoardTaskKindFilter } = await import(
+      "@/desktop/main/services/appSettingsService"
+    );
+
+    for (const filter of ["project", "task", "all"] as const) {
+      // When
+      await setBoardTaskKindFilter(filter);
+
+      // Then
+      expect(await getBoardTaskKindFilter()).toBe(filter);
+    }
+  });
+
+  it("미설정이거나 모르는 값이면 null을 반환한다", async () => {
+    // Given
+    const { getBoardTaskKindFilter } = await import("@/desktop/main/services/appSettingsService");
+
+    // When & Then
+    expect(await getBoardTaskKindFilter()).toBeNull();
+
+    storedSettings.set("board_task_kind_filter", "unknown");
+    expect(await getBoardTaskKindFilter()).toBeNull();
+  });
+});
+
+describe("최근 연 태스크 목록", () => {
+  it("최근 연 순서대로 앞에 두고 중복을 올린다", async () => {
+    // Given
+    const { getRecentTaskIds, recordRecentTaskId } = await import(
+      "@/desktop/main/services/appSettingsService"
+    );
+
+    // When
+    await recordRecentTaskId("task-a");
+    await recordRecentTaskId("task-b");
+    await recordRecentTaskId("task-a");
+
+    // Then
+    expect(await getRecentTaskIds()).toEqual(["task-a", "task-b"]);
+  });
+
+  it("20개를 넘으면 오래된 것부터 자른다", async () => {
+    // Given
+    const { getRecentTaskIds, recordRecentTaskId } = await import(
+      "@/desktop/main/services/appSettingsService"
+    );
+
+    // When
+    for (let index = 0; index < 25; index += 1) {
+      await recordRecentTaskId(`task-${index}`);
+    }
+
+    // Then
+    const taskIds = await getRecentTaskIds();
+    expect(taskIds).toHaveLength(20);
+    expect(taskIds[0]).toBe("task-24");
+    expect(taskIds[taskIds.length - 1]).toBe("task-5");
+  });
+
+  it("빈 id는 무시하고 깨진 JSON은 빈 목록으로 읽는다", async () => {
+    // Given
+    const { getRecentTaskIds, recordRecentTaskId } = await import(
+      "@/desktop/main/services/appSettingsService"
+    );
+
+    // When
+    await recordRecentTaskId("  ");
+
+    // Then
+    expect(await getRecentTaskIds()).toEqual([]);
+
+    storedSettings.set("recent_task_ids", "깨진값");
+    expect(await getRecentTaskIds()).toEqual([]);
+  });
+});

@@ -32,6 +32,7 @@ export const SHORTCUTS = {
   boardNotification: "Mod+Shift+I",
   boardProjectFilter: "Mod+Shift+F",
   commandPalette: "Mod+Shift+P",
+  controlPanel: "Mod+Shift+K",
   createTask: "Mod+N",
   newWindow: "Mod+Shift+N",
   pageBack: "Mod+[",

@@ -1,7 +1,30 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useSearchParams } from "react-router-dom";
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
+import { resetBoardPreferenceCaches } from "@/desktop/renderer/utils/boardPreferences";
 import { useTaskKindFilterParams } from "../useTaskKindFilterParams";
+
+const boardPreferencesModuleActions = vi.hoisted(() => ({
+  setBoardTaskKindFilter: vi.fn(async (..._args: unknown[]) => undefined),
+  getBoardTaskKindFilter: vi.fn(async () => null as "project" | "task" | "all" | null),
+}));
+
+vi.mock("@/desktop/renderer/utils/boardPreferences", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/desktop/renderer/utils/boardPreferences")>();
+  const stored: { boardTaskKindFilter: "project" | "task" | "all" | null } = {
+    boardTaskKindFilter: null,
+  };
+
+  return {
+    ...actual,
+    hydrateBoardTaskKindFilter: async () => stored.boardTaskKindFilter ?? "all",
+    persistBoardTaskKindFilter: (...args: unknown[]) => {
+      const filter = args[0] as "project" | "task" | "all";
+      stored.boardTaskKindFilter = filter;
+      void boardPreferencesModuleActions.setBoardTaskKindFilter(filter);
+    },
+  };
+});
 
 function TaskKindFilterHarness() {
   const [filter, setFilter] = useTaskKindFilterParams();
@@ -28,7 +51,8 @@ function renderHarness(initialEntry = "/ko") {
 
 describe("useTaskKindFilterParams", () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    vi.clearAllMocks();
+    resetBoardPreferenceCaches();
   });
 
   it("taskKind query가 없으면 All을 기본값으로 사용한다", () => {
@@ -38,7 +62,7 @@ describe("useTaskKindFilterParams", () => {
     expect(screen.getByTestId("query").textContent).toBe("");
   });
 
-  it("Project/Task 선택을 URL query와 sessionStorage에 반영하고 All 선택 시 query를 제거한다", async () => {
+  it("Project/Task 선택을 URL query에 반영하고 persist에 위임한다", async () => {
     renderHarness();
 
     fireEvent.click(screen.getByRole("button", { name: "project" }));
@@ -47,7 +71,7 @@ describe("useTaskKindFilterParams", () => {
       expect(screen.getByTestId("filter").textContent).toBe("project");
       expect(screen.getByTestId("query").textContent).toBe("project");
     });
-    expect(sessionStorage.getItem("kanvibe_task_kind_filter")).toBe("project");
+    expect(boardPreferencesModuleActions.setBoardTaskKindFilter).toHaveBeenCalledWith("project");
 
     fireEvent.click(screen.getByRole("button", { name: "task" }));
 
@@ -55,7 +79,7 @@ describe("useTaskKindFilterParams", () => {
       expect(screen.getByTestId("filter").textContent).toBe("task");
       expect(screen.getByTestId("query").textContent).toBe("task");
     });
-    expect(sessionStorage.getItem("kanvibe_task_kind_filter")).toBe("task");
+    expect(boardPreferencesModuleActions.setBoardTaskKindFilter).toHaveBeenCalledWith("task");
 
     fireEvent.click(screen.getByRole("button", { name: "all" }));
 
@@ -63,11 +87,14 @@ describe("useTaskKindFilterParams", () => {
       expect(screen.getByTestId("filter").textContent).toBe("all");
       expect(screen.getByTestId("query").textContent).toBe("");
     });
-    expect(sessionStorage.getItem("kanvibe_task_kind_filter")).toBeNull();
+    expect(boardPreferencesModuleActions.setBoardTaskKindFilter).toHaveBeenCalledWith("all");
   });
 
-  it("query가 없으면 sessionStorage에 저장된 필터를 복원한다", async () => {
-    sessionStorage.setItem("kanvibe_task_kind_filter", "task");
+  it("query가 없으면 persist에 맡긴 저장값을 복원한다", async () => {
+    const { persistBoardTaskKindFilter } = await import(
+      "@/desktop/renderer/utils/boardPreferences"
+    );
+    persistBoardTaskKindFilter("task");
 
     renderHarness();
 
@@ -86,8 +113,11 @@ describe("useTaskKindFilterParams", () => {
     });
   });
 
-  it("알 수 없는 query 값으로 진입하면 sessionStorage에 남은 필터도 함께 비운다", async () => {
-    sessionStorage.setItem("kanvibe_task_kind_filter", "project");
+  it("알 수 없는 query 값으로 진입하면 저장값도 함께 기본값으로 되돌린다", async () => {
+    const { persistBoardTaskKindFilter } = await import(
+      "@/desktop/renderer/utils/boardPreferences"
+    );
+    persistBoardTaskKindFilter("project");
 
     renderHarness("/ko?taskKind=unknown");
 
@@ -95,6 +125,10 @@ describe("useTaskKindFilterParams", () => {
       expect(screen.getByTestId("filter").textContent).toBe("all");
       expect(screen.getByTestId("query").textContent).toBe("");
     });
-    expect(sessionStorage.getItem("kanvibe_task_kind_filter")).toBeNull();
+
+    const { hydrateBoardTaskKindFilter } = await import(
+      "@/desktop/renderer/utils/boardPreferences"
+    );
+    await expect(hydrateBoardTaskKindFilter()).resolves.toBe("all");
   });
 });

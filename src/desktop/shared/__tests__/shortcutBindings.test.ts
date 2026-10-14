@@ -281,8 +281,11 @@ describe("단축키 재배정", () => {
       .toBe("createTask");
     expect(findShortcutCommandConflict(DEFAULT_SHORTCUT_BINDINGS, "createTask", "Mod+N", "linux"))
       .toBeNull();
-    expect(findShortcutCommandConflict(DEFAULT_SHORTCUT_BINDINGS, "taskDetailDock1", "Mod+Shift+K", "linux"))
+    /** Mod+Shift+K는 컨트롤 패널 기본값이라 비어 있는 예시 조합을 쓴다 */
+    expect(findShortcutCommandConflict(DEFAULT_SHORTCUT_BINDINGS, "taskDetailDock1", "Mod+Shift+M", "linux"))
       .toBeNull();
+    expect(findShortcutCommandConflict(DEFAULT_SHORTCUT_BINDINGS, "taskDetailDock1", "Mod+Shift+K", "linux"))
+      .toBe("controlPanel");
   });
 
   /**
@@ -334,3 +337,47 @@ describe("단축키 재배정", () => {
     }, "linux")).toEqual({});
   });
 });
+
+describe("컨트롤 패널 단축키", () => {
+  it("기본 단축키 Mod+Shift+K로 렌더러 이벤트와 Electron 입력이 같은 명령을 만든다", () => {
+    expect(findShortcutCommandForEvent(
+      DEFAULT_SHORTCUT_BINDINGS,
+      new KeyboardEvent("keydown", { key: "k", ctrlKey: true, shiftKey: true }),
+      "linux",
+    )).toBe("controlPanel");
+
+    expect(findShortcutCommandForEvent(
+      DEFAULT_SHORTCUT_BINDINGS,
+      new KeyboardEvent("keydown", { key: "k", metaKey: true, shiftKey: true }),
+      "mac",
+    )).toBe("controlPanel");
+
+    expect(findShortcutCommandForElectronInput(DEFAULT_SHORTCUT_BINDINGS, {
+      type: "keyDown",
+      key: "k",
+      control: true,
+      shift: true,
+    }, "linux")).toBe("controlPanel");
+  });
+
+  /** 설정 화면은 이 정의로 단축키 줄과 라벨을 그린다 */
+  it("보드 그룹 명령으로 정의되어 기본값과 라벨 키를 갖는다", () => {
+    const definition = SHORTCUT_COMMAND_DEFINITIONS.find((entry) => entry.id === "controlPanel");
+
+    expect(definition).toMatchObject({
+      group: "board",
+      defaultShortcut: "Mod+Shift+K",
+      labelKey: "controlPanel",
+    });
+    expect(DEFAULT_SHORTCUT_BINDINGS.controlPanel).toBe("Mod+Shift+K");
+  });
+
+  it("Shift 없이 Mod+K만으로는 컨트롤 패널을 열지 않는다", () => {
+    expect(findShortcutCommandForEvent(
+      DEFAULT_SHORTCUT_BINDINGS,
+      new KeyboardEvent("keydown", { key: "k", ctrlKey: true }),
+      "linux",
+    )).not.toBe("controlPanel");
+  });
+});
+

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import TaskQuickSearchDialog from "@/desktop/renderer/components/TaskQuickSearchDialog";
+import TaskQuickSearchDialog, { orderTasksByMostRecentlyOpened } from "@/desktop/renderer/components/TaskQuickSearchDialog";
 import { loadShortcutBindings } from "@/desktop/renderer/utils/shortcutBindings";
 import { DEFAULT_SHORTCUT_BINDINGS } from "@/desktop/shared/shortcutBindings";
 
@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   scrollIntoView: vi.fn(),
   setTaskQuickSearchOpen: vi.fn(),
   getShortcutBindings: vi.fn(),
+  getRecentTaskIds: vi.fn(async () => [] as string[]),
   hasShortcutBlocker: false,
 }));
 
@@ -25,6 +26,7 @@ vi.mock("@/desktop/renderer/actions/kanban", () => ({
 
 vi.mock("@/desktop/renderer/actions/appSettings", () => ({
   getShortcutBindings: (...args: unknown[]) => mocks.getShortcutBindings(...args),
+  getRecentTaskIds: () => mocks.getRecentTaskIds(),
   setShortcutBindings: vi.fn(),
 }));
 
@@ -47,6 +49,48 @@ vi.mock("@/desktop/renderer/components/BoardCommandProvider", () => ({
   }),
   useHasBoardShortcutBlocker: () => mocks.hasShortcutBlocker,
 }));
+
+function expectBefore(earlier: Element, later: Element) {
+  expect(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+}
+
+function openDialogWithShortcut(shortcut = "Ctrl+K") {
+  render(<TaskQuickSearchDialog shortcut={shortcut} />);
+
+  fireEvent.keyDown(window, {
+    key: "k",
+    ctrlKey: true,
+  });
+}
+
+async function openDialogAndWaitForList() {
+  openDialogWithShortcut();
+
+  await waitFor(() => {
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+}
+
+describe("orderTasksByMostRecentlyOpened", () => {
+  const tasks = [
+    { id: "task-a", title: "A" },
+    { id: "task-b", title: "B" },
+    { id: "task-c", title: "C" },
+  ] as Parameters<typeof orderTasksByMostRecentlyOpened>[0];
+
+  it("최근에 연 순서대로 앞에 두고 목록을 바꾸지 않는다", () => {
+    const ordered = orderTasksByMostRecentlyOpened(tasks, ["task-c", "task-a"]);
+
+    expect(ordered.map((task) => task.id)).toEqual(["task-c", "task-a", "task-b"]);
+    expect(tasks.map((task) => task.id)).toEqual(["task-a", "task-b", "task-c"]);
+  });
+
+  it("MRU에 없는 태스크는 원래 순서를 유지한다", () => {
+    const ordered = orderTasksByMostRecentlyOpened(tasks, []);
+
+    expect(ordered.map((task) => task.id)).toEqual(["task-a", "task-b", "task-c"]);
+  });
+});
 
 describe("TaskQuickSearchDialog", () => {
   beforeEach(async () => {
@@ -383,6 +427,64 @@ describe("TaskQuickSearchDialog", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
+  });
+
+  it("검색 결과 행에 상태 배지를 표시한다", async () => {
+    render(<TaskQuickSearchDialog shortcut="Ctrl+K" />);
+
+    fireEvent.keyDown(window, {
+      key: "k",
+      ctrlKey: true,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeTruthy();
+    });
+
+    expect(await screen.findAllByText("board.columns.todo")).toHaveLength(2);
+    expect(await screen.findAllByText("board.columns.progress")).toHaveLength(2);
+  });
+
+  it("빈 검색어는 MRU 순서로 보여 최근에 연 태스크가 먼저 나온다", async () => {
+    mocks.getRecentTaskIds.mockResolvedValue(["task-alert", "task-local"]);
+
+    render(<TaskQuickSearchDialog shortcut="Ctrl+K" />);
+
+    fireEvent.keyDown(window, {
+      key: "k",
+      ctrlKey: true,
+    });
+
+    const alertRow = await screen.findByRole("button", { name: /Alert automation/ });
+    const localRow = screen.getByRole("button", { name: /Local Task/ });
+    const remoteRow = screen.getByRole("button", { name: /Remote API Task/ });
+
+    expectBefore(alertRow, localRow);
+    expectBefore(localRow, remoteRow);
+  });
+
+  it("검색어가 있으면 MRU가 점수 정렬에 끼어들지 않는다", async () => {
+    mocks.getRecentTaskIds.mockResolvedValue(["task-alert", "task-local"]);
+
+    render(<TaskQuickSearchDialog shortcut="Ctrl+K" />);
+
+    fireEvent.keyDown(window, {
+      key: "k",
+      ctrlKey: true,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeTruthy();
+    });
+
+    const input = await screen.findByRole("textbox");
+    fireEvent.change(input, {
+      target: { value: "api" },
+    });
+
+    const buttons = await screen.getAllByRole("button");
+    expect(buttons.some((b) => /Remote API Task/.test(b.textContent))).toBe(true);
+    expect(buttons.some((b) => /Local Task/.test(b.textContent))).toBe(false);
   });
 
   it("should scroll the keyboard-selected result into view", async () => {

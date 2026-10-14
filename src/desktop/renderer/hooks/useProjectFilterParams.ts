@@ -1,9 +1,17 @@
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
+import {
+  hydrateBoardProjectFilter,
+  persistBoardProjectFilter,
+} from "@/desktop/renderer/utils/boardPreferences";
 
 const QUERY_PARAM_KEY = "projects";
-const SESSION_STORAGE_KEY = "kanvibe_project_filter";
 
+/**
+ * 보드 프로젝트 필터 선택을 URL 파라미터로 들고, 앱을 껐다 켜도 유지되어야 하므로
+ * AppSettings(앱 설정 계층)에 둔다. QUERY에 값이 있으면 그 값을 쓰고, 없으면 저장값을 복원한다.
+ * 저장은 화면 반영과 분리해 낙관적으로 진행하고, 실패해도 이번 세션의 선택은 그대로 유지한다.
+ */
 export function useProjectFilterParams(validProjectIds: string[]) {
   const validIdSet = useMemo(() => new Set(validProjectIds), [validProjectIds]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,21 +27,37 @@ export function useProjectFilterParams(validProjectIds: string[]) {
   useEffect(() => {
     const param = searchParams.get(QUERY_PARAM_KEY);
     if (param) {
-      syncToSessionStorage(param.split(",").filter((id) => validIdSet.has(id)));
+      persistBoardProjectFilter(param.split(",").filter((id) => validIdSet.has(id)));
       return;
     }
 
-    const restored = restoreFromSessionStorage(validIdSet);
-    if (restored.length > 0) {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.set(QUERY_PARAM_KEY, restored.join(","));
-      setSearchParams(nextParams, { replace: true });
-    }
+    let isSubscribed = true;
+
+    hydrateBoardProjectFilter()
+      .then((stored) => {
+        if (!isSubscribed) {
+          return;
+        }
+
+        const restored = stored.filter((id) => validIdSet.has(id));
+        if (restored.length > 0) {
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.set(QUERY_PARAM_KEY, restored.join(","));
+          setSearchParams(nextParams, { replace: true });
+        }
+      })
+      .catch((error) => {
+        console.error("프로젝트 필터를 불러오지 못했습니다:", error);
+      });
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [searchParams, setSearchParams, validIdSet]);
 
   const setSelectedProjectIds = (idsOrUpdater: string[] | ((prev: string[]) => string[])) => {
     const nextIds = typeof idsOrUpdater === "function" ? idsOrUpdater(selectedProjectIds) : idsOrUpdater;
-    syncToSessionStorage(nextIds);
+    persistBoardProjectFilter(nextIds);
 
     const nextParams = new URLSearchParams(searchParams);
     if (nextIds.length > 0) {
@@ -45,28 +69,4 @@ export function useProjectFilterParams(validProjectIds: string[]) {
   };
 
   return [selectedProjectIds, setSelectedProjectIds] as const;
-}
-
-function syncToSessionStorage(ids: string[]) {
-  try {
-    if (ids.length > 0) {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, ids.join(","));
-    } else {
-      sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    }
-  } catch {
-    /* sessionStorage 접근 불가 시 무시 */
-  }
-}
-
-function restoreFromSessionStorage(validIdSet: Set<string>): string[] {
-  try {
-    const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
-    if (!stored) {
-      return [];
-    }
-    return stored.split(",").filter((id) => validIdSet.has(id));
-  } catch {
-    return [];
-  }
 }

@@ -28,6 +28,7 @@ import { SessionType, TaskStatus, type KanbanTask } from "@/entities/KanbanTask"
 import type { Project } from "@/entities/Project";
 import { useAutoRefresh } from "@/desktop/renderer/hooks/useAutoRefresh";
 import { useProjectFilterParams } from "@/desktop/renderer/hooks/useProjectFilterParams";
+import { useBoardViewPreference } from "@/desktop/renderer/hooks/useBoardViewPreference";
 import { useAgentMonitor } from "@/desktop/renderer/hooks/useLiveAiSessions";
 import { useBoardTaskDiffStats } from "@/desktop/renderer/hooks/useTaskDiffStats";
 import { useUnreadNotificationCountByTask } from "@/desktop/renderer/hooks/useUnreadNotificationCountByTask";
@@ -363,7 +364,7 @@ export default function Board({
   const tc = useTranslations("common");
   const td = useTranslations("dashboard");
   const locale = useLocale();
-  const [activeView, setActiveView] = useState<"kanban" | "dashboard">(() => sessionStorage.getItem("kanvibe:board-view") === "kanban" ? "kanban" : "dashboard");
+  const [activeView, setActiveView] = useBoardViewPreference();
   const [tasks, setTasks] = useState<TasksByStatus>(initialTasks);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProjectRegistryOpen, setIsProjectRegistryOpen] = useState(false);
@@ -375,7 +376,6 @@ export default function Board({
   const [isMounted, setIsMounted] = useState(false);
   const agentMonitor = useAgentMonitor(isMounted);
   const runningAgentPanes = agentMonitor.error ? [] : agentMonitor.value.panes;
-  useEffect(() => { sessionStorage.setItem("kanvibe:board-view", activeView); }, [activeView]);
   const [selectedProjectIds, setSelectedProjectIds] = useProjectFilterParams(
     projects.map((p) => p.id),
   );

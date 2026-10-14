@@ -22,6 +22,7 @@ import {
   useBoardCommands,
   useHasBoardShortcutBlocker,
 } from "@/desktop/renderer/components/BoardCommandProvider";
+import { useRecentTaskIds } from "@/desktop/renderer/hooks/useRecentTaskIds";
 import { useShortcutBindings } from "@/desktop/renderer/utils/shortcutBindings";
 
 interface TaskQuickSearchDialogProps {
@@ -142,11 +143,15 @@ function findTokenMatchSet(token: string, fields: SearchFieldCandidate[]): Token
   return bestSplitMatchSet;
 }
 
-function buildSearchResults(tasks: SearchableTask[], query: string): SearchResult[] {
+function buildSearchResults(
+  tasks: SearchableTask[],
+  query: string,
+  recentTaskIds: string[] = [],
+): SearchResult[] {
   const trimmedQuery = query.trim();
 
   if (!trimmedQuery) {
-    return tasks.map((task) => ({
+    return orderTasksByMostRecentlyOpened(tasks, recentTaskIds).map((task) => ({
       task,
       score: 0,
       branchMatch: null,
@@ -198,7 +203,55 @@ function buildSearchResults(tasks: SearchableTask[], query: string): SearchResul
       };
     })
     .filter((result): result is SearchResult => result !== null)
-    .sort((left, right) => right.score - left.score);
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+
+      return compareByMostRecentlyOpened(left.task.id, right.task.id, recentTaskIds);
+    });
+}
+
+/**
+ * 빈 검색어의 초기 목록은 MRU 순서로 보여 프로젝트를 넘나드는 이동을 줄인다.
+ * 최근에 열지 않은 태스크는 목록에서 원래 자리를 유지한다.
+ */
+export function orderTasksByMostRecentlyOpened(
+  tasks: SearchableTask[],
+  recentTaskIds: string[],
+): SearchableTask[] {
+  const rankByTaskId = new Map(recentTaskIds.map((taskId, index) => [taskId, index]));
+
+  return [...tasks].sort((left, right) => {
+    const order = compareByMostRecentlyOpened(left.id, right.id, rankByTaskId);
+    if (order !== 0) {
+      return order;
+    }
+
+    return left.id.localeCompare(right.id);
+  });
+}
+
+function compareByMostRecentlyOpened(
+  leftTaskId: string,
+  rightTaskId: string,
+  rankByTaskIdOrRecentIds: Map<string, number> | string[],
+): number {
+  const rankByTaskId = Array.isArray(rankByTaskIdOrRecentIds)
+    ? new Map(rankByTaskIdOrRecentIds.map((taskId, index) => [taskId, index]))
+    : rankByTaskIdOrRecentIds;
+  const leftRank = rankByTaskId.get(leftTaskId);
+  const rightRank = rankByTaskId.get(rightTaskId);
+
+  if (leftRank === undefined) {
+    return rightRank === undefined ? 0 : 1;
+  }
+
+  if (rightRank === undefined) {
+    return -1;
+  }
+
+  return leftRank - rightRank;
 }
 
 export default function TaskQuickSearchDialog({
@@ -207,6 +260,7 @@ export default function TaskQuickSearchDialog({
   const boardCommands = useBoardCommands();
   const hasShortcutBlocker = useHasBoardShortcutBlocker();
   const t = useTranslations("taskSearch");
+  const tBoard = useTranslations("board");
   const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
@@ -222,7 +276,11 @@ export default function TaskQuickSearchDialog({
   const createTaskShortcut = shortcutBindings.createTask;
 
   const effectiveShortcut = shortcut || shortcutBindings.taskSearch;
-  const results = useMemo(() => buildSearchResults(tasks, query), [query, tasks]);
+  const [recentTaskIds, refreshRecentTaskIds] = useRecentTaskIds();
+  const results = useMemo(
+    () => buildSearchResults(tasks, query, recentTaskIds),
+    [query, recentTaskIds, tasks],
+  );
   const selectedResultIndex = results.length === 0
     ? 0
     : Math.min(selectedIndex, results.length - 1);
@@ -231,8 +289,9 @@ export default function TaskQuickSearchDialog({
     setQuery("");
     setSelectedIndex(0);
     setIsLoading(true);
+    refreshRecentTaskIds();
     setIsOpen(true);
-  }, []);
+  }, [refreshRecentTaskIds]);
 
   const closeDialog = useCallback(() => {
     setIsOpen(false);
@@ -515,6 +574,9 @@ export default function TaskQuickSearchDialog({
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
+                      <span className="rounded-full border border-border-default px-2 py-0.5 text-[11px] text-text-secondary">
+                        {tBoard(`columns.${task.status}`)}
+                      </span>
                       {isRemote && task.sshHost ? (
                         <span className="rounded-full bg-tag-antigravity-bg px-2 py-0.5 text-[11px] font-medium text-tag-antigravity-text">
                           {tc("remote")}

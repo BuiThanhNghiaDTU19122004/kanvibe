@@ -39,6 +39,22 @@ describe("keyboardShortcut", () => {
     expect(matchShortcutEvent(event, "Mod+Shift+O", true)).toBe(true);
   });
 
+  it("컨트롤 패널 단축키는 플랫폼별 Mod 조합으로 표시하고 매칭한다", () => {
+    expect(formatShortcutForDisplay(SHORTCUTS.controlPanel, "mac")).toBe("Cmd+Shift+K");
+    expect(formatShortcutForDisplay(SHORTCUTS.controlPanel, "linux")).toBe("Ctrl+Shift+K");
+
+    expect(matchShortcutEvent(new KeyboardEvent("keydown", {
+      key: "k",
+      metaKey: true,
+      shiftKey: true,
+    }), SHORTCUTS.controlPanel, "mac")).toBe(true);
+    expect(matchShortcutEvent(new KeyboardEvent("keydown", {
+      key: "k",
+      ctrlKey: true,
+      shiftKey: true,
+    }), SHORTCUTS.controlPanel, "linux")).toBe(true);
+  });
+
   it("페이지 이동 단축키는 플랫폼별 조합으로 표시한다", () => {
     expect(formatShortcutForDisplay(SHORTCUTS.pageBack, "mac")).toBe("Cmd+[");
     expect(formatShortcutForDisplay(SHORTCUTS.pageForward, "mac")).toBe("Cmd+]");
