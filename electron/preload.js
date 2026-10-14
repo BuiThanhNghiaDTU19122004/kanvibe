@@ -194,6 +194,13 @@ contextBridge.exposeInMainWorld("kanvibeDesktop", {
       ipcRenderer.removeListener("kanvibe:command-palette-shortcut", handler);
     };
   },
+  onControlPanelShortcut(listener) {
+    const handler = () => listener();
+    ipcRenderer.on("kanvibe:control-panel-shortcut", handler);
+    return () => {
+      ipcRenderer.removeListener("kanvibe:control-panel-shortcut", handler);
+    };
+  },
   onTaskDetailDockShortcut(listener) {
     const handler = (_event, shortcutIndex) => listener(shortcutIndex);
     ipcRenderer.on("kanvibe:task-detail-dock-shortcut", handler);

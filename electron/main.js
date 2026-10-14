@@ -823,6 +823,14 @@ function attachWindowHandlers(browserWindow) {
       return;
     }
 
+    /** 컨트롤 패널도 커맨드 팔레트와 같은 이유로 터미널 포커스 중에 먼저 가로챈다 */
+    if (shortcutCommand === "controlPanel") {
+      event.preventDefault();
+
+      browserWindow.webContents.send("kanvibe:control-panel-shortcut");
+      return;
+    }
+
     if (shortcutCommand === "newWindow") {
       event.preventDefault();
 

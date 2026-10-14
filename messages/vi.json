@@ -306,6 +306,7 @@
         "boardNotification": "Thông báo",
         "boardProjectFilter": "Lọc project",
         "commandPalette": "Bảng lệnh",
+        "controlPanel": "Bảng điều khiển",
         "boardPageFind": "Tìm trên trang",
         "createTask": "Tạo công việc",
         "newWindow": "Cửa sổ mới",
@@ -334,6 +335,16 @@
     "moveToStatusLabel": "Chuyển sang {status}",
     "empty": "Không có lệnh phù hợp",
     "hint": "↑↓ Di chuyển · Enter Chạy · Esc Đóng"
+  },
+  "controlPanel": {
+    "title": "Bảng điều khiển",
+    "filterPlaceholder": "Lọc theo tiêu đề, branch hoặc project...",
+    "empty": "Không có công việc phù hợp.",
+    "hint": "↑↓ Di chuyển · Enter Mở · Esc Đóng",
+    "shortcutHint": "{shortcut} Mở/đóng bảng này",
+    "noProject": "Không có project",
+    "terminal": "Terminal",
+    "agentRunning": "Agent đang chạy"
   },
   "paneLayout": {
     "title": "Bố trí terminal",
