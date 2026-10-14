@@ -53,12 +53,12 @@ function swallowPreferenceError(makePromise: () => Promise<unknown>, scope: stri
     pending = makePromise();
   } catch (error) {
     // kanvibeDesktop이 없는 테스트·브라우저 환경에서도 화면 동작을 막지 않는다
-    console.error(`보드 설정을 저장하지 못했습니다(${scope}):`, error);
+    console.error("보드 설정을 저장하지 못했습니다:", scope, error);
     return;
   }
 
   void pending.catch((error) => {
-    console.error(`보드 설정을 저장하지 못했습니다(${scope}):`, error);
+    console.error("보드 설정을 저장하지 못했습니다:", scope, error);
   });
 }
 

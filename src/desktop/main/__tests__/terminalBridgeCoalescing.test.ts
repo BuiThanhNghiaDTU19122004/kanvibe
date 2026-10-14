@@ -7,7 +7,8 @@ const mockAttachLocalSession = vi.fn();
 
 vi.mock("@/lib/database", () => ({
   getTaskRepository: async () => ({
-    findOneBy: async () => ({ id: "task-1", sessionType: "terminal", sessionName: "s", sshHost: null, worktreePath: null }),
+    findOne: async () => ({ id: "task-1", sessionType: "terminal", sessionName: "s", sshHost: null, worktreePath: null, project: null }),
+    findOneBy: async () => ({ id: "task-1", sessionType: "terminal", sessionName: "s", sshHost: null, worktreePath: null, project: null }),
   }),
 }));
 vi.mock("@/lib/terminal", () => ({

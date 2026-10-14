@@ -63,13 +63,6 @@ function openDialogWithShortcut(shortcut = "Ctrl+K") {
   });
 }
 
-async function openDialogAndWaitForList() {
-  openDialogWithShortcut();
-
-  await waitFor(() => {
-    expect(screen.getByRole("dialog")).toBeTruthy();
-  });
-}
 
 describe("orderTasksByMostRecentlyOpened", () => {
   const tasks = [
