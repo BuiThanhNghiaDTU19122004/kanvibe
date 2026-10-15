@@ -81,8 +81,8 @@ export default function TaskDetailTitleCard({ task, taskId }: TaskDetailTitleCar
             <button
               onClick={() => setShowBranchTasksModal(true)}
               className="flex-shrink-0 w-6 h-6 rounded-full bg-tag-project-bg hover:opacity-80 text-white flex items-center justify-center transition-opacity"
-              aria-label="View other tasks in this project"
-              title="다른 작업 보기"
+              aria-label={t("viewOtherTasks")}
+              title={t("viewOtherTasks")}
             >
               <svg
                 width="16"

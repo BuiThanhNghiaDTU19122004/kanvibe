@@ -96,7 +96,7 @@ export default function AiAccountLoginTerminal({
     );
 
     if (!loginReady?.ok) {
-      terminal.writeln(`\r\n\x1b[31m${loginReady?.error || "로그인 명령을 실행하지 못했습니다."}\x1b[0m`);
+      terminal.writeln(`\r\n\x1b[31m${loginReady?.error || "Failed to start login command."}\x1b[0m`);
       return () => {
         osc52ClipboardHandler.dispose();
         unsubscribeData?.();
@@ -143,7 +143,7 @@ export default function AiAccountLoginTerminal({
         cleanup = dispose;
       })
       .catch((error) => {
-        console.error("AI 계정 로그인 터미널 초기화 실패:", error);
+        console.error("AI account login terminal initialization failed:", error);
       });
 
     return () => {
