@@ -488,12 +488,12 @@ export async function registerProject(
   sshHost?: string
 ): Promise<{ success: boolean; error?: string; project?: Project }> {
   if (!name || !repoPath) {
-    return { success: false, error: "이름과 경로는 필수입니다." };
+    return { success: false, error: "Name and path are required." };
   }
 
   const isValid = await validateGitRepo(repoPath, sshHost || null);
   if (!isValid) {
-    return { success: false, error: "유효한 git 저장소가 아닙니다." };
+    return { success: false, error: "Not a valid git repository." };
   }
 
   const normalizedRepoPath = await resolveCommonRepoPath(repoPath, sshHost || null);
@@ -506,7 +506,7 @@ export async function registerProject(
     (project) => buildProjectPathKey(project.repoPath, project.sshHost) === pathKey,
   );
   if (alreadyRegistered) {
-    return { success: false, error: "이미 등록된 프로젝트입니다." };
+    return { success: false, error: "Project already registered." };
   }
 
   const defaultBranch = await getDefaultBranch(normalizedRepoPath, sshHost || null);
@@ -538,7 +538,7 @@ export async function registerProject(
     await repo.remove(saved);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "기본 태스크 생성 실패",
+      error: error instanceof Error ? error.message : "Failed to create default task",
     };
   }
 
@@ -1012,7 +1012,7 @@ export async function scanAndRegisterProjects(
         result.registered = result.registered.filter((name) => name !== projectName);
         console.error(`${projectName} 기본 브랜치 태스크 생성 실패:`, taskError);
         result.errors.push(
-          `${projectName} 기본 브랜치 태스크 생성 실패: ${taskError instanceof Error ? taskError.message : "알 수 없는 오류"}`,
+          `${projectName}: Failed to create default branch task: ${taskError instanceof Error ? taskError.message : "Unknown error"}`,
         );
         continue;
       }
@@ -1023,7 +1023,7 @@ export async function scanAndRegisterProjects(
       }
     } catch (error) {
       result.errors.push(
-        `${repoPath}: ${error instanceof Error ? error.message : "등록 실패"}`
+        `${repoPath}: ${error instanceof Error ? error.message : "Registration failed"}`
       );
     }
   }
@@ -1101,10 +1101,10 @@ export async function installProjectHooks(
 ): Promise<{ success: boolean; error?: string; status?: ClaudeHooksStatus | null }> {
   const repo = await getProjectRepository();
   const project = await repo.findOneBy({ id: projectId });
-  if (!project) return { success: false, error: "프로젝트를 찾을 수 없습니다." };
+  if (!project) return { success: false, error: "Project not found." };
 
   const { task } = await ensureProjectRootTask(project);
-  if (!task) return { success: false, error: "기본 브랜치 태스크를 찾을 수 없습니다." };
+  if (!task) return { success: false, error: "Default branch task not found." };
 
   try {
     await installKanvibeHookProvider(project.repoPath, task.id, "claude", project.sshHost);
@@ -1112,7 +1112,7 @@ export async function installProjectHooks(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "hooks 설정 실패",
+      error: error instanceof Error ? error.message : "Failed to configure hooks",
     };
   }
 }
@@ -1137,12 +1137,12 @@ export async function installTaskHooks(
 ): Promise<{ success: boolean; error?: string; status?: ClaudeHooksStatus | null }> {
   const taskRepo = await getTaskRepository();
   const task = await taskRepo.findOne({ where: { id: taskId }, relations: ["project"] });
-  if (!task?.project) return { success: false, error: "프로젝트를 찾을 수 없습니다." };
+  if (!task?.project) return { success: false, error: "Project not found." };
 
   try {
     const hookTarget = await resolveTaskHookTarget(task);
     if (!hookTarget) {
-      return { success: false, error: "프로젝트를 찾을 수 없습니다." };
+      return { success: false, error: "Project not found." };
     }
 
     await installKanvibeHookProvider(hookTarget.targetPath, hookTarget.taskId, "claude", hookTarget.sshHost);
@@ -1150,7 +1150,7 @@ export async function installTaskHooks(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "hooks 설정 실패",
+      error: error instanceof Error ? error.message : "Failed to configure hooks",
     };
   }
 }
@@ -1173,10 +1173,10 @@ export async function installProjectAntigravityHooks(
 ): Promise<{ success: boolean; error?: string; status?: AntigravityHooksStatus | null }> {
   const repo = await getProjectRepository();
   const project = await repo.findOneBy({ id: projectId });
-  if (!project) return { success: false, error: "프로젝트를 찾을 수 없습니다." };
+  if (!project) return { success: false, error: "Project not found." };
 
   const { task } = await ensureProjectRootTask(project);
-  if (!task) return { success: false, error: "기본 브랜치 태스크를 찾을 수 없습니다." };
+  if (!task) return { success: false, error: "Default branch task not found." };
 
   try {
     await installKanvibeHookProvider(project.repoPath, task.id, "antigravity", project.sshHost);
@@ -1184,7 +1184,7 @@ export async function installProjectAntigravityHooks(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "hooks 설정 실패",
+      error: error instanceof Error ? error.message : "Failed to configure hooks",
     };
   }
 }
@@ -1209,12 +1209,12 @@ export async function installTaskAntigravityHooks(
 ): Promise<{ success: boolean; error?: string; status?: AntigravityHooksStatus | null }> {
   const taskRepo = await getTaskRepository();
   const task = await taskRepo.findOne({ where: { id: taskId }, relations: ["project"] });
-  if (!task?.project) return { success: false, error: "프로젝트를 찾을 수 없습니다." };
+  if (!task?.project) return { success: false, error: "Project not found." };
 
   try {
     const hookTarget = await resolveTaskHookTarget(task);
     if (!hookTarget) {
-      return { success: false, error: "프로젝트를 찾을 수 없습니다." };
+      return { success: false, error: "Project not found." };
     }
 
     await installKanvibeHookProvider(hookTarget.targetPath, hookTarget.taskId, "antigravity", hookTarget.sshHost);
@@ -1222,7 +1222,7 @@ export async function installTaskAntigravityHooks(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "hooks 설정 실패",
+      error: error instanceof Error ? error.message : "Failed to configure hooks",
     };
   }
 }
@@ -1243,10 +1243,10 @@ export async function installProjectCodexHooks(
 ): Promise<{ success: boolean; error?: string; status?: CodexHooksStatus | null }> {
   const repo = await getProjectRepository();
   const project = await repo.findOneBy({ id: projectId });
-  if (!project) return { success: false, error: "프로젝트를 찾을 수 없습니다." };
+  if (!project) return { success: false, error: "Project not found." };
 
   const { task } = await ensureProjectRootTask(project);
-  if (!task) return { success: false, error: "기본 브랜치 태스크를 찾을 수 없습니다." };
+  if (!task) return { success: false, error: "Default branch task not found." };
 
   try {
     await installKanvibeHookProvider(project.repoPath, task.id, "codex", project.sshHost);
@@ -1254,7 +1254,7 @@ export async function installProjectCodexHooks(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "hooks 설정 실패",
+      error: error instanceof Error ? error.message : "Failed to configure hooks",
     };
   }
 }
@@ -1277,12 +1277,12 @@ export async function installTaskCodexHooks(
 ): Promise<{ success: boolean; error?: string; status?: CodexHooksStatus | null }> {
   const taskRepo = await getTaskRepository();
   const task = await taskRepo.findOne({ where: { id: taskId }, relations: ["project"] });
-  if (!task?.project) return { success: false, error: "프로젝트를 찾을 수 없습니다." };
+  if (!task?.project) return { success: false, error: "Project not found." };
 
   try {
     const hookTarget = await resolveTaskHookTarget(task);
     if (!hookTarget) {
-      return { success: false, error: "프로젝트를 찾을 수 없습니다." };
+      return { success: false, error: "Project not found." };
     }
 
     await installKanvibeHookProvider(hookTarget.targetPath, hookTarget.taskId, "codex", hookTarget.sshHost);
@@ -1290,7 +1290,7 @@ export async function installTaskCodexHooks(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "hooks 설정 실패",
+      error: error instanceof Error ? error.message : "Failed to configure hooks",
     };
   }
 }

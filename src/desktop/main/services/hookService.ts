@@ -31,7 +31,7 @@ export interface HookStatusInput {
 
 export async function startHookTask(input: HookStartInput) {
   if (!input.title) {
-    return { success: false, error: "title은 필수입니다.", status: 400 };
+    return { success: false, error: "Title is required.", status: 400 };
   }
 
   const repo = await getTaskRepository();
@@ -102,7 +102,7 @@ export async function updateHookTaskStatus(input: HookStatusInput) {
   if (!input.taskId || !input.status) {
     return {
       success: false,
-      error: "taskId, status는 필수입니다.",
+      error: "taskId and status are required.",
       status: 400,
     };
   }
@@ -111,7 +111,7 @@ export async function updateHookTaskStatus(input: HookStatusInput) {
   if (!taskStatus) {
     return {
       success: false,
-      error: `유효하지 않은 상태입니다: ${input.status}`,
+      error: `Invalid status: ${input.status}`,
       status: 400,
     };
   }
@@ -131,7 +131,7 @@ export async function updateHookTaskStatus(input: HookStatusInput) {
 
     return {
       success: false,
-      error: `작업을 찾을 수 없습니다: ${input.taskId}`,
+      error: `Task not found: ${input.taskId}`,
       status: 404,
     };
   }

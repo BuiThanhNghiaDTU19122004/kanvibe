@@ -63,7 +63,7 @@ describe("resolveValidLocalWorkingDirectory", () => {
   it("returns error if task is missing", () => {
     expect(resolveValidLocalWorkingDirectory(null)).toEqual({
       ok: false,
-      error: "태스크 정보가 없습니다.",
+      error: "Task information is missing.",
     });
   });
 
@@ -98,7 +98,7 @@ describe("resolveValidLocalWorkingDirectory", () => {
     });
     expect(result).toEqual({
       ok: false,
-      error: "작업 디렉토리가 존재하지 않습니다: /missing/worktree",
+      error: "Working directory does not exist: /missing/worktree",
     });
   });
 
@@ -109,7 +109,7 @@ describe("resolveValidLocalWorkingDirectory", () => {
     });
     expect(result).toEqual({
       ok: false,
-      error: "작업 디렉토리가 존재하지 않습니다: /missing/worktree",
+      error: "Working directory does not exist: /missing/worktree",
     });
   });
 
@@ -120,7 +120,7 @@ describe("resolveValidLocalWorkingDirectory", () => {
     });
     expect(result).toEqual({
       ok: false,
-      error: "작업 디렉토리가 설정되지 않았습니다.",
+      error: "Working directory is not configured.",
     });
   });
 });

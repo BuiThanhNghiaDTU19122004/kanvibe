@@ -741,7 +741,7 @@ async function cleanupTaskResources(
   // 프로젝트 없이 브랜치/worktree만 남은 태스크는 stale 상태이므로 worktree/브랜치 정리는 건너뛴다.
   if (!project && task.branchName && task.worktreePath) {
     if (options.throwOnError) {
-      throw new Error("연결된 프로젝트를 찾을 수 없어 worktree/브랜치 정리를 완료할 수 없습니다.");
+      throw new Error("Cannot complete worktree/branch cleanup because the linked project was not found.");
     }
     return;
   }
@@ -760,7 +760,7 @@ async function cleanupTaskResources(
       };
       console.warn("worktree/브랜치 정리 건너뜀: 정리할 프로젝트 정보가 부족합니다.", warningPayload);
       if (options.throwOnError) {
-        throw new Error("정리할 프로젝트 정보가 부족해 worktree/브랜치 정리를 건너뛰었습니다.");
+        throw new Error("Skipped worktree/branch cleanup due to insufficient project information.");
       }
       return;
     }

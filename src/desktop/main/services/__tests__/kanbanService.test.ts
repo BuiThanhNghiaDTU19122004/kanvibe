@@ -899,7 +899,7 @@ describe("kanbanService.createTask", () => {
     const { deleteTask } = await import("@/desktop/main/services/kanbanService");
 
     // When & Then
-    await expect(deleteTask("task-2")).rejects.toThrow("연결된 프로젝트를 찾을 수 없어");
+    await expect(deleteTask("task-2")).rejects.toThrow("Cannot complete worktree/branch cleanup");
     expect(mocks.detachSession).toHaveBeenCalledWith("task-2", "cleanup-task-resources");
     expect(mocks.removeSessionOnly).toHaveBeenCalledWith(
       "tmux",
@@ -929,7 +929,7 @@ describe("kanbanService.createTask", () => {
     const { deleteTask } = await import("@/desktop/main/services/kanbanService");
 
     // When & Then
-    await expect(deleteTask("task-3")).rejects.toThrow("연결된 프로젝트를 찾을 수 없어");
+    await expect(deleteTask("task-3")).rejects.toThrow("Cannot complete worktree/branch cleanup");
     expect(mocks.projectRepo.findOneBy).not.toHaveBeenCalled();
     expect(mocks.detachSession).toHaveBeenCalledWith("task-3", "cleanup-task-resources");
     expect(mocks.removeSessionOnly).toHaveBeenCalledWith(
