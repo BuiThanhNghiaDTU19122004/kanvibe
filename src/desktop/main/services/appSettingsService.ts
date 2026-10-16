@@ -311,3 +311,96 @@ export async function getBoardSortPreference(): Promise<BoardSortPreference> {
 export async function setBoardSortPreference(preference: BoardSortPreference): Promise<void> {
   await setAppSetting(BOARD_SORT_PREFERENCE_KEY, serializeBoardSortPreference(preference));
 }
+
+export type BoardViewPreference = "kanban" | "dashboard";
+export type TaskKindFilterPreference = "project" | "task" | "all";
+
+const BOARD_VIEW_KEY = "board_view";
+const BOARD_PROJECT_FILTER_KEY = "board_project_filter";
+const BOARD_TASK_KIND_FILTER_KEY = "board_task_kind_filter";
+const RECENT_TASK_IDS_KEY = "recent_task_ids";
+
+/** 최근에 연 태스크 목록 최대 길이. 빠른 검색 MRU 정렬의 기준이 된다 */
+const RECENT_TASK_IDS_LIMIT = 20;
+
+const TASK_KIND_FILTER_VALUES = ["project", "task", "all"] as const;
+
+/** 보드 화면(칸반/대시보드) 선택을 조회한다. 미설정이면 null을 반환한다 */
+export async function getBoardView(): Promise<BoardViewPreference | null> {
+  const value = await getAppSetting(BOARD_VIEW_KEY);
+  return value === "kanban" || value === "dashboard" ? value : null;
+}
+
+/** 보드 화면 선택을 저장한다 */
+export async function setBoardView(view: BoardViewPreference): Promise<void> {
+  await setAppSetting(BOARD_VIEW_KEY, view);
+}
+
+/** 보드 프로젝트 필터로 고른 프로젝트 id 목록을 조회한다 */
+export async function getBoardProjectFilter(): Promise<string[]> {
+  const value = await getAppSetting(BOARD_PROJECT_FILTER_KEY);
+  if (!value) {
+    return [];
+  }
+
+  return value.split(",").map((id) => id.trim()).filter(Boolean);
+}
+
+/** 보드 프로젝트 필터 선택을 저장한다 */
+export async function setBoardProjectFilter(projectIds: string[]): Promise<void> {
+  const nextIds = projectIds.map((id) => id.trim()).filter(Boolean);
+  await setAppSetting(BOARD_PROJECT_FILTER_KEY, nextIds.join(","));
+}
+
+/** 보드 작업 종류 필터를 조회한다. 미설정이거나 모르는 값이면 null을 반환한다 */
+export async function getBoardTaskKindFilter(): Promise<TaskKindFilterPreference | null> {
+  const value = await getAppSetting(BOARD_TASK_KIND_FILTER_KEY);
+  return (TASK_KIND_FILTER_VALUES as readonly string[]).includes(value ?? "")
+    ? (value as TaskKindFilterPreference)
+    : null;
+}
+
+/** 보드 작업 종류 필터를 저장한다 */
+export async function setBoardTaskKindFilter(filter: TaskKindFilterPreference): Promise<void> {
+  await setAppSetting(BOARD_TASK_KIND_FILTER_KEY, filter);
+}
+
+function parseStoredTaskIds(value: string | null): string[] {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsedValue = JSON.parse(value);
+    if (!Array.isArray(parsedValue)) {
+      return [];
+    }
+
+    return Array.from(new Set(
+      parsedValue
+        .filter((taskId): taskId is string => typeof taskId === "string")
+        .map((taskId) => taskId.trim())
+        .filter(Boolean),
+    ));
+  } catch {
+    return [];
+  }
+}
+
+/** 최근에 연 태스크 id 목록을 조회한다. 가장 최근이 앞에 온다 */
+export async function getRecentTaskIds(): Promise<string[]> {
+  return parseStoredTaskIds(await getAppSetting(RECENT_TASK_IDS_KEY));
+}
+
+/** 연 태스크를 최근 목록 맨 앞으로 올린다. 20개를 넘으면 자른다 */
+export async function recordRecentTaskId(taskId: string): Promise<void> {
+  const normalizedTaskId = taskId.trim();
+  if (!normalizedTaskId) {
+    return;
+  }
+
+  const storedIds = await getRecentTaskIds();
+  const nextIds = [normalizedTaskId, ...storedIds.filter((id) => id !== normalizedTaskId)]
+    .slice(0, RECENT_TASK_IDS_LIMIT);
+  await setAppSetting(RECENT_TASK_IDS_KEY, JSON.stringify(nextIds));
+}

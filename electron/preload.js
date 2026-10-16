@@ -194,6 +194,13 @@ contextBridge.exposeInMainWorld("kanvibeDesktop", {
       ipcRenderer.removeListener("kanvibe:command-palette-shortcut", handler);
     };
   },
+  onControlPanelShortcut(listener) {
+    const handler = () => listener();
+    ipcRenderer.on("kanvibe:control-panel-shortcut", handler);
+    return () => {
+      ipcRenderer.removeListener("kanvibe:control-panel-shortcut", handler);
+    };
+  },
   onTaskDetailDockShortcut(listener) {
     const handler = (_event, shortcutIndex) => listener(shortcutIndex);
     ipcRenderer.on("kanvibe:task-detail-dock-shortcut", handler);
@@ -220,6 +227,9 @@ contextBridge.exposeInMainWorld("kanvibeDesktop", {
   },
   notifyShortcutCaptureChanged(isCapturing) {
     ipcRenderer.send("kanvibe:shortcut-capture-changed", Boolean(isCapturing));
+  },
+  notifyTerminalFocusChanged(isFocused) {
+    ipcRenderer.send("kanvibe:terminal-focus-changed", Boolean(isFocused));
   },
   updateTitleBarOverlay(resolvedTheme) {
     ipcRenderer.send("kanvibe:update-title-bar-overlay", resolvedTheme);

@@ -306,6 +306,7 @@
         "boardNotification": "Notification center",
         "boardProjectFilter": "Project filter",
         "commandPalette": "Command palette",
+        "controlPanel": "Control panel",
         "boardPageFind": "Find on page",
         "createTask": "Create task",
         "newWindow": "New window",
@@ -334,6 +335,16 @@
     "moveToStatusLabel": "Move to {status}",
     "empty": "No matching commands",
     "hint": "↑↓ Navigate · Enter Run · Esc Close"
+  },
+  "controlPanel": {
+    "title": "Control Panel",
+    "filterPlaceholder": "Filter by title, branch, or project...",
+    "empty": "No matching tasks found.",
+    "hint": "↑↓ Navigate · Enter Open · Esc Close",
+    "shortcutHint": "{shortcut} Toggle this panel",
+    "noProject": "No project",
+    "terminal": "Terminal",
+    "agentRunning": "Agent running"
   },
   "paneLayout": {
     "title": "Pane Layout Settings",

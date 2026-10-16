@@ -11,6 +11,7 @@ import { deleteTask, moveTaskToColumn } from "@/desktop/renderer/actions/kanban"
 import { runBackgroundTaskSyncNow } from "@/desktop/renderer/actions/backgroundTaskSync";
 import { useTaskKindFilterParams } from "@/desktop/renderer/hooks/useTaskKindFilterParams";
 import { useBoardSortPreference } from "@/desktop/renderer/hooks/useBoardSortPreference";
+import { useBoardViewPreference } from "@/desktop/renderer/hooks/useBoardViewPreference";
 import { TaskPriority } from "@/entities/TaskPriority";
 import type { BoardSortPreference } from "@/desktop/shared/boardSort";
 import { SessionType, TaskStatus, type KanbanTask } from "@/entities/KanbanTask";
@@ -109,6 +110,10 @@ vi.mock("@/desktop/renderer/hooks/useTaskKindFilterParams", () => ({
 
 vi.mock("@/desktop/renderer/hooks/useBoardSortPreference", () => ({
   useBoardSortPreference: vi.fn().mockReturnValue([{ keys: [] }, vi.fn()]),
+}));
+
+vi.mock("@/desktop/renderer/hooks/useBoardViewPreference", () => ({
+  useBoardViewPreference: vi.fn().mockReturnValue(["kanban", vi.fn()]),
 }));
 
 vi.mock("../Column", () => ({
@@ -423,9 +428,9 @@ function BoardShortcutBlocker() {
 describe("Board defaultSessionType sync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    sessionStorage.setItem("kanvibe:board-view", "kanban");
     vi.mocked(useTaskKindFilterParams).mockReturnValue(["all", vi.fn()] as const);
     vi.mocked(useBoardSortPreference).mockReturnValue([{ keys: [] }, vi.fn()] as const);
+    vi.mocked(useBoardViewPreference).mockReturnValue(["kanban", vi.fn()] as const);
     delete window.kanvibeDesktop;
     mockNavigatorPlatform("Linux x86_64");
     mockWindowFind();

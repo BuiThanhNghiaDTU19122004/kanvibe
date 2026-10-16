@@ -299,6 +299,7 @@
         "boardNotification": "알림 센터",
         "boardProjectFilter": "프로젝트 필터",
         "commandPalette": "커맨드 팔레트",
+        "controlPanel": "컨트롤 패널",
         "boardPageFind": "페이지 내 검색",
         "createTask": "작업 생성",
         "newWindow": "새 창",
@@ -327,6 +328,16 @@
     "moveToStatusLabel": "{status} 상태로 이동",
     "empty": "일치하는 명령이 없습니다",
     "hint": "↑↓ 이동 · Enter 실행 · Esc 닫기"
+  },
+  "controlPanel": {
+    "title": "컨트롤 패널",
+    "filterPlaceholder": "제목, 브랜치 또는 프로젝트로 필터...",
+    "empty": "일치하는 태스크가 없습니다.",
+    "hint": "↑↓ 이동 · Enter 열기 · Esc 닫기",
+    "shortcutHint": "{shortcut} 이 패널 열기/닫기",
+    "noProject": "프로젝트 없음",
+    "terminal": "터미널",
+    "agentRunning": "에이전트 실행 중"
   },
   "paneLayout": {
     "title": "Pane 레이아웃 설정",

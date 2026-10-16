@@ -1,6 +1,10 @@
 import type { SessionType } from "@/entities/KanbanTask";
 import type { BoardSortPreference } from "@/desktop/shared/boardSort";
 import type { ShortcutBindings } from "@/desktop/shared/shortcutBindings";
+import type {
+  BoardViewPreference,
+  TaskKindFilterPreference,
+} from "@/desktop/main/services/appSettingsService";
 import { invokeDesktop } from "@/desktop/renderer/ipc";
 import { triggerDesktopRefresh } from "@/desktop/renderer/utils/refresh";
 
@@ -134,6 +138,49 @@ export function getBoardSortPreference(): Promise<BoardSortPreference> {
 /** 보드가 정렬 상태를 직접 들고 있으므로 설정 refresh를 태우지 않는다. 기준을 누를 때마다 보드를 다시 그리면 깜빡인다 */
 export function setBoardSortPreference(preference: BoardSortPreference): Promise<void> {
   return invokeDesktop("appSettings", "setBoardSortPreference", preference);
+}
+
+/** 보드 화면(칸반/대시보드) 선택을 조회한다. 렌더러 훅의 캐시가 세션 안의 값 노출을 맡는다 */
+export function getBoardView(): Promise<BoardViewPreference | null> {
+  return invokeDesktop("appSettings", "getBoardView");
+}
+
+/** 보드 화면 선택 저장은 화면이 바뀐 뒤 백그라운드로 따라가며 설정 refresh를 태우지 않는다 */
+export function setBoardView(view: BoardViewPreference): Promise<void> {
+  return invokeDesktop("appSettings", "setBoardView", view);
+}
+
+/** 보드 프로젝트 필터 선택을 조회한다 */
+export function getBoardProjectFilter(): Promise<string[]> {
+  return invokeDesktop("appSettings", "getBoardProjectFilter");
+}
+
+/** 보드 프로젝트 필터 선택 저장은 화면이 바뀐 뒤 백그라운드로 따라가며 설정 refresh를 태우지 않는다 */
+export function setBoardProjectFilter(projectIds: string[]): Promise<void> {
+  return invokeDesktop("appSettings", "setBoardProjectFilter", projectIds);
+}
+
+/** 보드 작업 종류 필터를 조회한다 */
+export function getBoardTaskKindFilter(): Promise<TaskKindFilterPreference | null> {
+  return invokeDesktop("appSettings", "getBoardTaskKindFilter");
+}
+
+/** 보드 작업 종류 필터 저장은 화면이 바뀐 뒤 백그라운드로 따라가며 설정 refresh를 태우지 않는다 */
+export function setBoardTaskKindFilter(filter: TaskKindFilterPreference): Promise<void> {
+  return invokeDesktop("appSettings", "setBoardTaskKindFilter", filter);
+}
+
+/** 최근에 연 태스크 id 목록(MRU)을 조회한다. 가장 최근이 앞에 온다 */
+export function getRecentTaskIds(): Promise<string[]> {
+  return invokeDesktop("appSettings", "getRecentTaskIds");
+}
+
+/**
+ * 태스크를 연 흔적을 MRU 목록 맨 앞으로 올린다.
+ * 내비게이션 흐름을 막지 않도록 오류는 호출자가 버리고, 저장 실패해도 화면 동작에는 영향을 주지 않는다.
+ */
+export function recordRecentTaskId(taskId: string): Promise<void> {
+  return invokeDesktop("appSettings", "recordRecentTaskId", taskId);
 }
 
 export async function getThemePreference(): Promise<ThemePreference> {

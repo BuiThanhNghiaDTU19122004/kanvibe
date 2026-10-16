@@ -298,6 +298,7 @@
         "boardNotification": "通知中心",
         "boardProjectFilter": "项目筛选",
         "commandPalette": "命令面板",
+        "controlPanel": "控制面板",
         "boardPageFind": "页面内查找",
         "createTask": "创建任务",
         "newWindow": "新窗口",
@@ -326,6 +327,16 @@
     "moveToStatusLabel": "移动到 {status}",
     "empty": "没有匹配的命令",
     "hint": "↑↓ 导航 · Enter 运行 · Esc 关闭"
+  },
+  "controlPanel": {
+    "title": "控制面板",
+    "filterPlaceholder": "按标题、分支或项目筛选...",
+    "empty": "没有找到匹配的任务。",
+    "hint": "↑↓ 移动 · Enter 打开 · Esc 关闭",
+    "shortcutHint": "{shortcut} 开关此面板",
+    "noProject": "无项目",
+    "terminal": "终端",
+    "agentRunning": "Agent 运行中"
   },
   "paneLayout": {
     "title": "面板布局设置",

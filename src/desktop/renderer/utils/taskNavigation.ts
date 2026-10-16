@@ -1,5 +1,6 @@
 import { localizeHref, redirect } from "@/desktop/renderer/navigation";
 import { openInternalRouteInNewWindow } from "@/desktop/renderer/utils/windowOpen";
+import { recordRecentTask } from "@/desktop/renderer/utils/boardPreferences";
 
 interface NavigateToTaskDetailOptions {
   currentLocale?: string;
@@ -54,6 +55,9 @@ export async function navigateToTaskDetail(
   }: NavigateToTaskDetailOptions = {},
 ) {
   const href = getTaskDetailHref(taskId, currentLocale, searchParams);
+
+  // 태스크 상세 진입은 빠른 검색 MRU 정렬의 근거가 된다. 기록 실패는 이동을 막지 않는다
+  recordRecentTask(taskId);
 
   if (openInNewWindow) {
     openInternalRouteInNewWindow(href);

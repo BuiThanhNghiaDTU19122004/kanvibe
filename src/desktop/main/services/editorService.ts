@@ -1,6 +1,7 @@
 import { execFile } from "child_process";
 import { getProjectRepository, getTaskRepository } from "@/lib/database";
 import { createLocalShellEnvironment } from "@/lib/shellEnvironment";
+import { resolveTaskWorkingDirectory } from "@/lib/taskWorkingDirectory";
 
 const VS_CODE_COMMAND = "code";
 const VS_CODE_LAUNCH_TIMEOUT_MS = 10_000;
@@ -34,7 +35,7 @@ async function resolveTaskEditorTarget(taskId: string): Promise<{ targetPath: st
   const project = task.projectId
     ? await (await getProjectRepository()).findOneBy({ id: task.projectId })
     : null;
-  const targetPath = task.worktreePath || project?.repoPath || null;
+  const targetPath = resolveTaskWorkingDirectory({ worktreePath: task.worktreePath, project });
   if (!targetPath) {
     return null;
   }

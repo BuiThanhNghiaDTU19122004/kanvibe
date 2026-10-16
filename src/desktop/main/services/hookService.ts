@@ -4,6 +4,7 @@ import { createWorktreeWithSession } from "@/lib/worktree";
 import { broadcastBoardUpdate, broadcastHookStatusTargetMissing, broadcastTaskStatusChanged } from "@/lib/boardNotifier";
 import { installTaskHooksImmediately } from "@/desktop/main/services/kanbanService";
 import { persistTaskStateAtPath as persistHookTaskState } from "@/desktop/main/services/kanvibeTaskStateService";
+import { resolveTaskWorkingDirectory } from "@/lib/taskWorkingDirectory";
 
 const STATUS_MAP: Record<string, TaskStatus> = {
   todo: TaskStatus.TODO,
@@ -136,7 +137,7 @@ export async function updateHookTaskStatus(input: HookStatusInput) {
   }
 
   const projectName = task.project?.name || task.projectId || "Unknown project";
-  const taskStatePath = task.worktreePath || task.project?.repoPath || null;
+  const taskStatePath = resolveTaskWorkingDirectory(task);
   const taskStateSshHost = task.sshHost || task.project?.sshHost || null;
   task.status = taskStatus;
 

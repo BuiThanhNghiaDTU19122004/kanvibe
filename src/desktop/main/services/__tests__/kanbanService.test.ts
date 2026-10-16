@@ -2449,6 +2449,7 @@ describe("kanbanService.getSearchableTasks", () => {
         sshHost: null,
         status: "progress",
         updatedAt: "2026-05-02T00:00:00.000Z",
+        hasTerminal: false,
       },
       {
         id: "task-done",
@@ -2459,6 +2460,7 @@ describe("kanbanService.getSearchableTasks", () => {
         sshHost: null,
         status: "done",
         updatedAt: "2026-05-02T00:00:00.000Z",
+        hasTerminal: false,
       },
     ]);
   });

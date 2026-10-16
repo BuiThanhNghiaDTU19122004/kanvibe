@@ -3,6 +3,7 @@ import { getTaskRepository } from "@/lib/database";
 import { KanbanTask, TaskStatus, SessionType } from "@/entities/KanbanTask";
 import type { Project } from "@/entities/Project";
 import { TaskPriority } from "@/entities/TaskPriority";
+import { resolveTaskWorkingDirectory } from "@/lib/taskWorkingDirectory";
 import { createWorktreeWithSession, removeWorktreeAndBranch, createSessionWithoutWorktree, removeSessionOnly, formatProjectBranchSessionName } from "@/lib/worktree";
 import { getProjectRepository } from "@/lib/database";
 import {
@@ -47,6 +48,8 @@ export interface SearchableTask {
   sshHost: string | null;
   status: TaskStatus;
   updatedAt: Date;
+  /** Quick search opens these straight on the terminal view */
+  hasTerminal: boolean;
 }
 
 const DONE_PAGE_SIZE = 20;
@@ -483,6 +486,7 @@ export async function getSearchableTasks(): Promise<SearchableTask[]> {
     sshHost: task.sshHost ?? task.project?.sshHost ?? null,
     status: task.status,
     updatedAt: task.updatedAt,
+    hasTerminal: Boolean(task.sessionType && task.sessionName),
   })));
 }
 
@@ -900,7 +904,7 @@ export async function connectTerminalSession(
   const project = await projectRepo.findOneBy({ id: task.projectId });
   if (!project) return null;
 
-  const workingDir = task.worktreePath || project.repoPath;
+  const workingDir = resolveTaskWorkingDirectory({ worktreePath: task.worktreePath, project }) || project.repoPath;
 
   try {
     await installTaskHookFilesBeforeTerminalAttach(workingDir, {

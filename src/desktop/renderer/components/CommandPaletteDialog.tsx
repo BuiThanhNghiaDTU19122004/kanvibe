@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { runBackgroundTaskSyncNow } from "@/desktop/renderer/actions/backgroundTaskSync";
 import { useBoardCommands } from "@/desktop/renderer/components/BoardCommandProvider";
+import { CONTROL_PANEL_OPEN_EVENT } from "@/desktop/renderer/components/ControlPanelDialog";
 import { requestActiveTerminalFocusAfterUiSettles } from "@/desktop/renderer/utils/terminalFocus";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { TASK_STATUS_ORDER, type TaskStatus } from "@/entities/KanbanTask";
@@ -19,6 +20,7 @@ export default function CommandPaletteDialog() {
   const boardCommands = useBoardCommands();
   const t = useTranslations("commandPalette");
   const tBoard = useTranslations("board");
+  const tControlPanel = useTranslations("controlPanel");
   const tc = useTranslations("common");
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsListRef = useRef<HTMLDivElement>(null);
@@ -55,6 +57,11 @@ export default function CommandPaletteDialog() {
     closeDialog();
   }
 
+  function openControlPanel() {
+    window.dispatchEvent(new Event(CONTROL_PANEL_OPEN_EVENT));
+    closeDialog();
+  }
+
   function selectStatus(status: TaskStatus) {
     if (hasActiveTaskContext) {
       boardCommands.moveActiveTaskToStatus(status);
@@ -84,6 +91,14 @@ export default function CommandPaletteDialog() {
         });
       }
     }
+
+    /** 자주 쓰는 명령이 위로 오게 Sync·Move 다음에 둔다 */
+    items.push({
+      id: "controlPanel",
+      command: "control panel",
+      description: tControlPanel("title"),
+      run: openControlPanel,
+    });
 
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps

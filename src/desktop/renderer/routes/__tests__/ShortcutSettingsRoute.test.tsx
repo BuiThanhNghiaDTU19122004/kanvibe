@@ -66,11 +66,12 @@ describe("ShortcutSettingsRoute", () => {
 
     const dockRow = findRecordButtonFor("commands.taskDetailDock:4:PR");
     fireEvent.click(within(dockRow).getByText("record"));
-    fireEvent.keyDown(window, { key: "k", ctrlKey: true, shiftKey: true });
+    // Mod+Shift+K is now taken by controlPanel; use Mod+Shift+Y which has no default binding.
+    fireEvent.keyDown(window, { key: "y", ctrlKey: true, shiftKey: true });
 
     await waitFor(() => {
       expect(mocks.setShortcutBindings).toHaveBeenCalledWith(expect.objectContaining({
-        taskDetailDock4: "Mod+Shift+K",
+        taskDetailDock4: "Mod+Shift+Y",
       }));
     });
 

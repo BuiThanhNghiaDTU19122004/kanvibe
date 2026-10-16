@@ -5,6 +5,8 @@ import {
   canonicalizeShortcutForPlatform,
   createTaskDetailDockShortcut,
   createTerminalTabShortcut,
+  isTerminalControlKeyEvent,
+  isTerminalEventTarget,
   matchElectronShortcutInput,
   matchShortcutEvent,
   type ElectronShortcutInput,
@@ -30,6 +32,7 @@ export type ShortcutCommandId =
   | "boardNotification"
   | "boardProjectFilter"
   | "commandPalette"
+  | "controlPanel"
   | "boardPageFind"
   | "createTask"
   | "newWindow"
@@ -93,6 +96,7 @@ export const SHORTCUT_COMMAND_DEFINITIONS: readonly ShortcutCommandDefinition[] 
   { id: "boardNotification", group: "board", defaultShortcut: SHORTCUTS.boardNotification, labelKey: "boardNotification" },
   { id: "boardProjectFilter", group: "board", defaultShortcut: SHORTCUTS.boardProjectFilter, labelKey: "boardProjectFilter" },
   { id: "commandPalette", group: "board", defaultShortcut: SHORTCUTS.commandPalette, labelKey: "commandPalette" },
+  { id: "controlPanel", group: "board", defaultShortcut: SHORTCUTS.controlPanel, labelKey: "controlPanel" },
   { id: "boardPageFind", group: "board", defaultShortcut: SHORTCUTS.boardPageFind, labelKey: "boardPageFind" },
   { id: "createTask", group: "board", defaultShortcut: SHORTCUTS.createTask, labelKey: "createTask" },
   { id: "newWindow", group: "board", defaultShortcut: SHORTCUTS.newWindow, labelKey: "newWindow" },
@@ -223,9 +227,13 @@ function findShortcutCommand(
 /** 렌더러 keydown이 어떤 명령인지 판정한다 */
 export function findShortcutCommandForEvent(
   bindings: ShortcutBindings,
-  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">,
+  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey"> & { target?: EventTarget | null },
   platform: ShortcutPlatformInput,
 ): ShortcutCommandId | null {
+  if (isTerminalEventTarget(event.target) && isTerminalControlKeyEvent(event, platform)) {
+    return null;
+  }
+
   return findShortcutCommand(bindings, (shortcut) => matchShortcutEvent(event, shortcut, platform));
 }
 

@@ -8,6 +8,7 @@ import NotificationListener from "@/desktop/renderer/components/NotificationList
 import ReleaseUpdateDialog from "@/desktop/renderer/components/ReleaseUpdateDialog";
 import TaskQuickSearchDialog from "@/desktop/renderer/components/TaskQuickSearchDialog";
 import CommandPaletteDialog from "@/desktop/renderer/components/CommandPaletteDialog";
+import ControlPanelDialog from "@/desktop/renderer/components/ControlPanelDialog";
 import { DEFAULT_LOCALE, getSafeLocale, isSupportedLocale, getLocaleMessages, readLocalePreference, saveLocalePreference } from "@/desktop/renderer/utils/locales";
 import { triggerDesktopRefresh } from "@/desktop/renderer/utils/refresh";
 import SettingsLayout from "@/desktop/renderer/components/SettingsLayout";
@@ -107,6 +108,7 @@ function LocaleShell() {
       <BoardCommandProvider>
         <TaskQuickSearchDialog />
         <CommandPaletteDialog />
+        <ControlPanelDialog />
         <NotificationListener />
         <ReleaseUpdateDialog />
         <BoardEventAlert />

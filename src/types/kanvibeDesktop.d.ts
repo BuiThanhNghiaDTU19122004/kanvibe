@@ -14,11 +14,13 @@ interface KanvibeDesktopApi {
   onNotificationShortcut?: (listener: () => void) => () => void;
   onCreateTaskShortcut?: (listener: () => void) => () => void;
   onCommandPaletteShortcut?: (listener: () => void) => () => void;
+  onControlPanelShortcut?: (listener: () => void) => () => void;
   onTaskDetailDockShortcut?: (listener: (shortcutIndex: number) => void) => () => void;
   onTaskDetailUsageShortcut?: (listener: () => void) => () => void;
   notifyShortcutBindingsChanged?: () => void;
   onShortcutBindingsChanged?: (listener: () => void) => () => void;
   notifyShortcutCaptureChanged?: (isCapturing: boolean) => void;
+  notifyTerminalFocusChanged?: (isFocused: boolean) => void;
   focusExistingInternalRoute?: (route: string) => Promise<boolean>;
   [key: string]: unknown;
 }
