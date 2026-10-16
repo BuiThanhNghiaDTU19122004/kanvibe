@@ -152,14 +152,14 @@ async function resolveRemoteSshConfig(
   const task = await taskRepo.findOneBy({ id: taskId });
 
   if (!task || !task.sshHost) {
-    return { ok: false, error: "원격 세션이 아닙니다." };
+    return { ok: false, error: "Not a remote session." };
   }
 
   const sshHosts = await parseSSHConfig();
   const sshConfig = sshHosts.find((host) => host.host === task.sshHost);
 
   if (!sshConfig) {
-    return { ok: false, error: `SSH 호스트를 찾을 수 없습니다: ${task.sshHost}` };
+    return { ok: false, error: `SSH host not found: ${task.sshHost}` };
   }
 
   return { ok: true, sshConfig };
@@ -180,7 +180,7 @@ export async function pasteImageToRemoteTerminal(
     const remotePath = await transferImageToRemoteHost(resolved.sshConfig, imageBuffer);
     return { ok: true, remotePath };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "이미지 전송 실패" };
+    return { ok: false, error: error instanceof Error ? error.message : "Failed to transfer image to remote terminal." };
   }
 }
 
@@ -202,7 +202,7 @@ export async function openTerminal(
   const task = await taskRepo.findOne({ where: { id: taskId }, relations: ["project"] });
 
   if (!task || !task.sessionType || !task.sessionName) {
-    return { ok: false, error: "작업에 연결된 세션이 없습니다." };
+    return { ok: false, error: "No session attached to this task." };
   }
 
   const workingDirectoryContext = {
@@ -276,10 +276,10 @@ export async function openTerminal(
     return { ok: true };
   } catch (error) {
     finalizeClient();
-    client.close(1011, "터미널 연결 실패");
+    client.close(1011, "Terminal connection failed");
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "터미널 연결 실패",
+      error: error instanceof Error ? error.message : "Terminal connection failed",
     };
   }
 }

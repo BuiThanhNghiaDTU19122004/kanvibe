@@ -132,6 +132,19 @@ vi.mock("@/lib/terminalMouseSelection", () => ({
   installMacShiftSelectionPatch: () => mockDisposeMacShiftSelectionPatch,
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => {
+    const messages: Record<string, string> = {
+      "errors.connectionFailed": "Terminal connection failed.",
+      "errors.connectionClosed": "Connection closed.",
+      "errors.imagePasteFailed": "Failed to transfer image to remote terminal.",
+      "errors.noSession": "No session attached to this task.",
+      "errors.notRemoteSession": "Not a remote session.",
+    };
+    return messages[key] || key;
+  },
+}));
+
 describe("Desktop Terminal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -321,7 +334,7 @@ describe("Desktop Terminal", () => {
 
   it("원격 세션에서 이미지 전송이 실패하면 터미널에 에러를 표시한다", async () => {
     // Given
-    mockPasteImageToRemoteTerminal.mockResolvedValue({ ok: false, error: "원격 세션이 아닙니다." });
+    mockPasteImageToRemoteTerminal.mockResolvedValue({ ok: false, error: "Not a remote session." });
     const { container } = render(<Terminal taskId="task-1" isRemote />);
     await waitFor(() => {
       expect(mockOpenTerminal).toHaveBeenCalledWith("task-1", null, 80, 24);
@@ -333,7 +346,7 @@ describe("Desktop Terminal", () => {
 
     // Then
     await waitFor(() => {
-      expect(latestXtermInstance?.writeln).toHaveBeenCalledWith("\r\n\x1b[31m원격 세션이 아닙니다.\x1b[0m");
+      expect(latestXtermInstance?.writeln).toHaveBeenCalledWith("\r\n\x1b[31mNot a remote session.\x1b[0m");
     });
     expect(mockWriteTerminal).not.toHaveBeenCalled();
   });

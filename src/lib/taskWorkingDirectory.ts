@@ -35,7 +35,7 @@ export function resolveValidLocalWorkingDirectory(
   task: TaskWorkingDirectoryContext | null | undefined,
 ): ValidLocalWorkingDirectoryResult {
   if (!task) {
-    return { ok: false, error: "태스크 정보가 없습니다." };
+    return { ok: false, error: "Task information is missing." };
   }
 
   const worktreePath = task.worktreePath?.trim() || null;
@@ -52,8 +52,8 @@ export function resolveValidLocalWorkingDirectory(
 
   const candidate = worktreePath || repoPath;
   if (candidate) {
-    return { ok: false, error: `작업 디렉토리가 존재하지 않습니다: ${candidate}` };
+    return { ok: false, error: `Working directory does not exist: ${candidate}` };
   }
 
-  return { ok: false, error: "작업 디렉토리가 설정되지 않았습니다." };
+  return { ok: false, error: "Working directory is not configured." };
 }

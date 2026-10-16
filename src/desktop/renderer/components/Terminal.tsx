@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import "@xterm/xterm/css/xterm.css";
 import { createTerminalOptions, installMacShiftSelectionPatch } from "@/lib/terminalMouseSelection";
 import { installOsc52ClipboardHandler } from "@/lib/terminalClipboard";
@@ -80,6 +81,70 @@ function loadNerdFontFamily(): Promise<string | null> {
 
 export default function Terminal({ taskId, tabId = null, isHidden = false, isRemote = false, onStatus }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const tTerminal = useTranslations("terminal");
+  const tTerminalRef = useRef(tTerminal);
+  tTerminalRef.current = tTerminal;
+
+  const formatTerminalError = useCallback((
+    errorOrReason?: string | null,
+    fallbackKey: "connectionFailed" | "connectionClosed" | "imagePasteFailed" = "connectionFailed",
+  ): string => {
+    const t = tTerminalRef.current;
+    if (!errorOrReason) {
+      return t(`errors.${fallbackKey}`);
+    }
+
+    switch (errorOrReason) {
+      case "terminal.imagePasteFailed":
+      case "이미지 전송 실패":
+      case "Failed to transfer image to remote terminal.":
+      case "Image transfer failed":
+        return t("errors.imagePasteFailed");
+      case "terminal.connectionClosed":
+      case "연결이 종료되었습니다.":
+      case "Connection closed.":
+      case "Connection closed":
+        return t("errors.connectionClosed");
+      case "terminal.connectionFailed":
+      case "터미널 연결 실패":
+      case "Terminal connection failed":
+      case "Terminal connection failed.":
+        return t("errors.connectionFailed");
+      case "terminal.noSession":
+      case "작업에 연결된 세션이 없습니다.":
+      case "No session attached to this task.":
+        return t("errors.noSession");
+      case "terminal.notRemoteSession":
+      case "원격 세션이 아닙니다.":
+      case "Not a remote session.":
+        return t("errors.notRemoteSession");
+      case "terminal.tmuxSessionCreateFailed":
+      case "tmux 세션 생성에 실패했습니다.":
+      case "Failed to create tmux session.":
+        return t("errors.tmuxSessionCreateFailed");
+      case "terminal.processSpawnFailed":
+      case "터미널 프로세스 생성 실패":
+      case "Failed to start terminal process.":
+        return t("errors.processSpawnFailed");
+      case "terminal.sshConnectionFailed":
+      case "SSH 연결 실패":
+      case "SSH connection failed.":
+      case "SSH connection failed":
+        return t("errors.sshConnectionFailed");
+      case "terminal.loginFailed":
+      case "로그인 명령을 실행하지 못했습니다.":
+      case "Failed to start login command.":
+        return t("errors.loginFailed");
+    }
+
+    if (errorOrReason.startsWith("SSH 호스트를 찾을 수 없습니다:") || errorOrReason.startsWith("SSH host not found:")) {
+      const host = errorOrReason.split(":")[1]?.trim() ?? "";
+      return t("errors.sshHostNotFound", { host });
+    }
+
+    return errorOrReason;
+  }, []);
+
   /** connect는 taskId·tabId에만 묶여 있어야 하므로, 표시 여부·원격 여부는 ref로 읽는다 */
   const isHiddenRef = useRef(isHidden);
   const isRemoteRef = useRef(isRemote);
@@ -127,7 +192,8 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
         if (result.ok && result.remotePath) {
           window.kanvibeDesktop!.writeTerminal(taskId, tabId, result.remotePath);
         } else {
-          terminal.writeln(`\r\n\x1b[31m${result.error || "이미지 전송 실패"}\x1b[0m`);
+          const errorMsg = formatTerminalError(result.error, "imagePasteFailed");
+          terminal.writeln(`\r\n\x1b[31m${errorMsg}\x1b[0m`);
         }
       });
     };
@@ -246,8 +312,9 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
 
     const unsubscribeClose = window.kanvibeDesktop!.onTerminalClose((event: { taskId: string; tabId: string | null; reason: string | null }) => {
       if (isThisTerminal(event)) {
-        terminal.writeln(`\r\n\x1b[31m${event.reason || "연결이 종료되었습니다."}\x1b[0m`);
-        onStatusRef.current?.(tabId, "error", event.reason ?? undefined);
+        const closeMsg = formatTerminalError(event.reason, "connectionClosed");
+        terminal.writeln(`\r\n\x1b[31m${closeMsg}\x1b[0m`);
+        onStatusRef.current?.(tabId, "error", closeMsg);
       }
     });
 
@@ -285,9 +352,10 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
     });
 
     const terminalReady = await window.kanvibeDesktop!.openTerminal(taskId, tabId, terminal.cols, terminal.rows);
-    onStatusRef.current?.(tabId, terminalReady.ok ? "ready" : "error", terminalReady.error);
+    const readyError = terminalReady.ok ? undefined : formatTerminalError(terminalReady.error, "connectionFailed");
+    onStatusRef.current?.(tabId, terminalReady.ok ? "ready" : "error", readyError);
     if (!terminalReady.ok) {
-      terminal.writeln(`\r\n\x1b[31m${terminalReady.error || "터미널 연결 실패"}\x1b[0m`);
+      terminal.writeln(`\r\n\x1b[31m${readyError}\x1b[0m`);
       return () => {
         isTerminalDisposed = true;
         disposeMacShiftSelectionPatch();
@@ -359,7 +427,7 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
       window.kanvibeDesktop!.closeTerminal(taskId, tabId);
       terminal.dispose();
     };
-  }, [tabId, taskId]);
+  }, [formatTerminalError, tabId, taskId]);
 
   useEffect(() => {
     let isDisposed = false;
@@ -376,14 +444,14 @@ export default function Terminal({ taskId, tabId = null, isHidden = false, isRem
       })
       .catch((error) => {
         onStatusRef.current?.(tabId, "error", error instanceof Error ? error.message : "Terminal connection failed");
-        console.error("데스크톱 터미널 초기화 실패:", error);
+        console.error("Desktop terminal initialization failed:", error);
       });
 
     return () => {
       isDisposed = true;
       cleanup?.();
     };
-  }, [connect]);
+  }, [connect, tabId]);
 
   return <div ref={containerRef} className="w-full h-full overflow-hidden bg-terminal-bg" />;
 }

@@ -552,11 +552,14 @@
     },
     "openInVsCode": "Mở trong VS Code",
     "openInVsCodeFailed": "Chưa mở được VS Code. Kiểm tra lệnh code trong PATH.",
-    "pullRequestNotFound": "Branch này chưa có pull request."
+    "pullRequestNotFound": "Branch này chưa có pull request.",
+    "viewOtherTasks": "Xem các công việc khác trong project"
   },
   "projectBranchTasks": {
     "title": "Công việc của project",
-    "noTasks": "Project chưa có công việc"
+    "noTasks": "Project chưa có công việc",
+    "totalTasks": "Tổng cộng {count}",
+    "loading": "Đang tải..."
   },
   "diffView": {
     "title": "Thay đổi mã nguồn",
@@ -733,5 +736,20 @@
       "done": "Bạn đã đánh dấu hoàn tất. Branch, worktree và terminal được giữ lại."
     },
     "agentProcessHint": "Tiến trình CLI đang chạy. Agent có thể đang chờ bạn nhập."
+  },
+  "terminal": {
+    "connected": "Đã kết nối với terminal.",
+    "errors": {
+      "imagePasteFailed": "Truyền hình ảnh tới terminal từ xa thất bại.",
+      "connectionClosed": "Kết nối đã đóng.",
+      "connectionFailed": "Kết nối terminal thất bại.",
+      "noSession": "Không có phiên terminal nào gắn với công việc này.",
+      "notRemoteSession": "Không phải là phiên từ xa.",
+      "sshHostNotFound": "Không tìm thấy host SSH: {host}",
+      "tmuxSessionCreateFailed": "Không tạo được phiên tmux.",
+      "processSpawnFailed": "Không khởi động được tiến trình terminal.",
+      "sshConnectionFailed": "Kết nối SSH thất bại.",
+      "loginFailed": "Không thể khởi chạy lệnh đăng nhập."
+    }
   }
 }

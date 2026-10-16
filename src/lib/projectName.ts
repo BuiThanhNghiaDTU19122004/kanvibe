@@ -1,7 +1,7 @@
 import path from "path";
 
 /** 같은 PC 안에서 이름과 상위 폴더까지 모두 겹쳐 표시 이름을 구분할 수 없을 때 알리는 문구 */
-export const DUPLICATE_PROJECT_NAME_ERROR = "같은 PC에 이름과 상위 폴더가 모두 같은 프로젝트가 이미 있습니다.";
+export const DUPLICATE_PROJECT_NAME_ERROR = "A project with the same name and parent folder already exists on this host.";
 
 /**
  * 같은 PC 안에서 이름이 겹칠 때만 상위 폴더를 덧붙여 프로젝트 표시 이름을 구분한다.
