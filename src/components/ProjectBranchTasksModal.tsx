@@ -26,6 +26,7 @@ export default function ProjectBranchTasksModal({
   onClose,
 }: ProjectBranchTasksModalProps) {
   const t = useTranslations("board.columns");
+  const tModal = useTranslations("projectBranchTasks");
   const router = useRouter();
   const pathname = usePathname();
   const [tasksByStatus, setTasksByStatus] = useState<Record<TaskStatus, KanbanTask[]>>({
@@ -87,11 +88,11 @@ export default function ProjectBranchTasksModal({
         className="w-full max-w-6xl max-h-[85vh] overflow-hidden bg-bg-page rounded-xl border border-border-default shadow-lg flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 헤더 */}
+        {/* Header */}
         <div className="flex items-center justify-between gap-2 p-6 border-b border-border-subtle bg-bg-surface">
           <div>
-            <h2 className="text-lg font-semibold text-text-primary">프로젝트 작업</h2>
-            <p className="text-xs text-text-secondary mt-1">총 {totalTasks}개</p>
+            <h2 className="text-lg font-semibold text-text-primary">{tModal("title")}</h2>
+            <p className="text-xs text-text-secondary mt-1">{tModal("totalTasks", { count: totalTasks })}</p>
           </div>
           <button
             onClick={onClose}
@@ -111,17 +112,17 @@ export default function ProjectBranchTasksModal({
           </button>
         </div>
 
-        {/* 본문 - Kanban 보드 */}
+        {/* Content - Kanban board */}
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-sm text-text-secondary">로딩 중...</p>
+            <p className="text-sm text-text-secondary">{tModal("loading")}</p>
           </div>
         ) : (
           <div className="flex-1 overflow-x-auto p-6">
             <div className="flex gap-4 min-w-full">
               {COLUMNS.map((column) => (
                 <div key={column.status} className="flex-shrink-0 w-80">
-                  {/* 칼럼 헤더 */}
+                  {/* Column Header */}
                   <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border-subtle">
                     <div className={`w-2 h-2 rounded-full ${column.colorClass}`} />
                     <h3 className="text-sm font-semibold text-text-primary">
@@ -132,11 +133,11 @@ export default function ProjectBranchTasksModal({
                     </span>
                   </div>
 
-                  {/* 작업 목록 */}
+                  {/* Task List */}
                   <div className="space-y-2">
                     {tasksByStatus[column.status].length === 0 ? (
                       <div className="text-xs text-text-muted text-center py-8">
-                        작업 없음
+                        {tModal("noTasks")}
                       </div>
                     ) : (
                       tasksByStatus[column.status].map((task) => (

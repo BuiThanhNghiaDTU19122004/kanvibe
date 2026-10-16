@@ -260,7 +260,7 @@ describe("hookService.updateHookTaskStatus", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "taskId, status는 필수입니다.",
+      error: "taskId and status are required.",
       status: 400,
     });
   });

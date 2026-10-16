@@ -8,6 +8,7 @@ import { AI_PROVIDER_CONFIG_DIR_SPECS } from "@/lib/aiUsage/providerConfigDir";
 import type { AiLoginProvider } from "@/lib/aiUsage/loginProvider";
 import { createLocalShellEnvironment } from "@/lib/shellEnvironment";
 import { prepareLoginBrowser } from "./loginBrowser";
+import { safeSendWebContents } from "@/desktop/main/safeWebContents";
 
 /**
  * 계정 로그인은 태스크 터미널이 아니다.
@@ -99,7 +100,7 @@ export async function openAiAccountLogin(
       if (loginSessions.get(sessionKey) !== session) return;
       if (status?.isLoggedIn) {
         closeAiAccountLogin(webContents.id, accountRoot);
-        if (!webContents.isDestroyed()) webContents.send("kanvibe:ai-login-exit", { accountRoot, exitCode: 0 });
+        safeSendWebContents(webContents, "kanvibe:ai-login-exit", { accountRoot, exitCode: 0 });
       } else {
         session.pollTimer = setTimeout(() => void checkLogin(), 5000);
       }
@@ -108,9 +109,7 @@ export async function openAiAccountLogin(
   }
 
   ptyProcess.onData((data) => {
-    if (!webContents.isDestroyed()) {
-      webContents.send("kanvibe:ai-login-data", { accountRoot, data });
-    }
+    safeSendWebContents(webContents, "kanvibe:ai-login-data", { accountRoot, data });
   });
 
   ptyProcess.onExit(({ exitCode }) => {
@@ -118,9 +117,7 @@ export async function openAiAccountLogin(
     void disposeBrowser();
     if (loginSessions.get(sessionKey) !== session) return;
     loginSessions.delete(sessionKey);
-    if (!webContents.isDestroyed()) {
-      webContents.send("kanvibe:ai-login-exit", { accountRoot, exitCode });
-    }
+    safeSendWebContents(webContents, "kanvibe:ai-login-exit", { accountRoot, exitCode });
   });
 
   return { ok: true };

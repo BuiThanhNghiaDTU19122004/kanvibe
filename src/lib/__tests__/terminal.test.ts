@@ -525,10 +525,10 @@ describe("attachLocalSession — tmux 세션 자동 생성", () => {
       "feat-login",
       ws,
       "/workspace",
-    )).rejects.toThrow("tmux 세션 생성에 실패했습니다.");
+    )).rejects.toThrow("Failed to create tmux session.");
 
     // Then
-    expect(ws.close).toHaveBeenCalledWith(1008, "tmux 세션 생성에 실패했습니다.");
+    expect(ws.close).toHaveBeenCalledWith(1008, "Failed to create tmux session.");
   });
 });
 

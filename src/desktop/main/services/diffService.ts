@@ -87,13 +87,13 @@ function validateFilePath(worktreePath: string, filePath: string, sshHost?: stri
   const pathModule = sshHost ? path.posix : path;
 
   if (pathModule.isAbsolute(filePath)) {
-    throw new Error("잘못된 파일 경로: 절대 경로는 허용되지 않습니다");
+    throw new Error("Invalid file path: absolute paths are not allowed");
   }
 
   const resolvedPath = pathModule.resolve(worktreePath, filePath);
   const relativePath = pathModule.relative(worktreePath, resolvedPath);
   if (relativePath.startsWith("..") || pathModule.isAbsolute(relativePath)) {
-    throw new Error("잘못된 파일 경로: worktree 외부 접근이 감지되었습니다");
+    throw new Error("Invalid file path: outside worktree access detected");
   }
 
   return resolvedPath;
@@ -105,15 +105,15 @@ async function getTaskWorktreeInfo(taskId: string) {
   const task = await repo.findOne({ where: { id: taskId } });
 
   if (!task) {
-    throw new Error("태스크를 찾을 수 없습니다");
+    throw new Error("Task not found");
   }
 
   if (!task.worktreePath) {
-    throw new Error("worktree 경로가 설정되지 않은 태스크입니다");
+    throw new Error("Task worktree path is not set");
   }
 
   if (!task.branchName) {
-    throw new Error("브랜치가 설정되지 않은 태스크입니다");
+    throw new Error("Task branch is not set");
   }
 
   return {
@@ -295,7 +295,7 @@ export async function saveFileContent(
     return { success: true };
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "파일 저장 중 알 수 없는 오류가 발생했습니다";
+      error instanceof Error ? error.message : "An unknown error occurred while saving the file";
     console.error("파일 저장 실패:", error);
     return { success: false, error: message };
   }
