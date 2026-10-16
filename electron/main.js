@@ -7,8 +7,9 @@ const os = require("node:os");
 const path = require("node:path");
 const process = require("node:process");
 const { pathToFileURL } = require("node:url");
-const { app, BrowserWindow, Menu, clipboard, ipcMain, session } = require("electron");
+const { app, BrowserWindow, Menu, clipboard, dialog, ipcMain, session } = require("electron");
 const { createDesktopDiagnostics, resolveDesktopLogPath, serializeErrorForLog } = require("./diagnostics");
+const { createProcessErrorHandler, safeSendWebContents } = require("./processErrorHandler");
 const { applyAppDataDirectoryOverride } = require("./runtimeEnvironment");
 const { acquireSingleInstance } = require("./singleInstance");
 
@@ -79,16 +80,53 @@ function initializeDiagnostics() {
   }
 }
 
+let processErrorHandler = null;
+
 function registerProcessDiagnostics() {
+  processErrorHandler = createProcessErrorHandler({
+    logDiagnostic,
+    serializeErrorForLog,
+    killAllTerminalSessions: () => killAllTerminalSessionsOnQuit,
+    onFatalCrash: () => {
+      stopBackgroundTaskSync?.();
+      stopBackgroundTaskSync = null;
+      hookServer?.close();
+    },
+    showErrorDialog: (options) => {
+      if (dialog && typeof dialog.showMessageBoxSync === "function") {
+        return dialog.showMessageBoxSync(options);
+      }
+      return 0;
+    },
+    exitProcess: (code) => {
+      if (app && typeof app.exit === "function") {
+        app.exit(code);
+      } else {
+        process.exit(code);
+      }
+    },
+    getLogPath: () => (diagnostics ? diagnostics.logPath : resolveDesktopLogPath(app.getPath("userData"))),
+    writeClipboard: (text) => {
+      if (clipboard && typeof clipboard.writeText === "function") {
+        clipboard.writeText(text);
+      }
+    },
+    notifyRendererError: (type, err) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        safeSendWebContents(window, "kanvibe:main-process-error", {
+          type,
+          error: serializeErrorForLog(err),
+        });
+      }
+    },
+  });
+
   process.on("uncaughtException", (error) => {
-    logDiagnostic("main:uncaught-exception", { error: serializeErrorForLog(error) });
-    console.error("[kanvibe] uncaught exception:", error);
-    process.exit(1);
+    processErrorHandler.handleUncaughtException(error);
   });
 
   process.on("unhandledRejection", (reason) => {
-    logDiagnostic("main:unhandled-rejection", { reason: serializeErrorForLog(reason) });
-    console.error("[kanvibe] unhandled rejection:", reason);
+    processErrorHandler.handleUnhandledRejection(reason);
   });
 
   app.on("child-process-gone", (_event, details) => {
@@ -162,8 +200,15 @@ registerProcessDiagnostics();
 
 function broadcastNotificationsChanged() {
   for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) {
-      window.webContents.send("kanvibe:notifications-changed");
+    if (!window.isDestroyed() && !window.webContents?.isDestroyed()) {
+      try {
+        window.webContents.send("kanvibe:notifications-changed");
+      } catch (error) {
+        logDiagnostic("main:safe-send-failed", {
+          channel: "kanvibe:notifications-changed",
+          error: serializeErrorForLog(error),
+        });
+      }
     }
   }
 }
@@ -171,8 +216,15 @@ function broadcastNotificationsChanged() {
 /** 단축키 재배정은 저장한 창만이 아니라 열려 있는 모든 창의 렌더러 캐시에 반영돼야 한다 */
 function broadcastShortcutBindingsChanged() {
   for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) {
-      window.webContents.send("kanvibe:shortcut-bindings-changed");
+    if (!window.isDestroyed() && !window.webContents?.isDestroyed()) {
+      try {
+        window.webContents.send("kanvibe:shortcut-bindings-changed");
+      } catch (error) {
+        logDiagnostic("main:safe-send-failed", {
+          channel: "kanvibe:shortcut-bindings-changed",
+          error: serializeErrorForLog(error),
+        });
+      }
     }
   }
 }
@@ -184,11 +236,18 @@ function broadcastNotificationActivated(appNotification) {
 }
 
 function sendNotificationActivated(browserWindow, appNotification) {
-  if (!browserWindow || browserWindow.isDestroyed()) {
+  if (!browserWindow || browserWindow.isDestroyed() || browserWindow.webContents?.isDestroyed()) {
     return;
   }
 
-  browserWindow.webContents.send("kanvibe:notification-activated", appNotification);
+  try {
+    browserWindow.webContents.send("kanvibe:notification-activated", appNotification);
+  } catch (error) {
+    logDiagnostic("main:safe-send-failed", {
+      channel: "kanvibe:notification-activated",
+      error: serializeErrorForLog(error),
+    });
+  }
 }
 
 function getBuildMainRoot() {
@@ -754,6 +813,10 @@ function attachWindowHandlers(browserWindow) {
   });
 
   browserWindow.webContents.on("before-input-event", (event, input) => {
+    if (browserWindow.isDestroyed() || browserWindow.webContents.isDestroyed()) {
+      return;
+    }
+
     const {
       getShortcutPlatformFromProcessPlatform,
       isBlockedElectronShortcutInput,
@@ -1118,8 +1181,15 @@ function registerBoardEventForwarding() {
       }
 
       for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) {
-          window.webContents.send("kanvibe:board-event", payload);
+        if (!window.isDestroyed() && !window.webContents?.isDestroyed()) {
+          try {
+            window.webContents.send("kanvibe:board-event", payload);
+          } catch (error) {
+            logDiagnostic("main:safe-send-failed", {
+              channel: "kanvibe:board-event",
+              error: serializeErrorForLog(error),
+            });
+          }
         }
       }
     })();

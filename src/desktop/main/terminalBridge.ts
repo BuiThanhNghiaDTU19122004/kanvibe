@@ -11,6 +11,7 @@ import { launchNativeAgent } from "@/lib/nativeAgentRuntime";
 import type { AgentLaunchResult } from "@/desktop/shared/agentRuntime";
 import type { AiSessionProvider } from "@/lib/aiSessions/types";
 import { resolveTaskWorkingDirectory, resolveValidLocalWorkingDirectory } from "@/lib/taskWorkingDirectory";
+import { safeSendWebContents } from "@/desktop/main/safeWebContents";
 
 const OPEN = 1;
 const CLOSED = 3;
@@ -82,11 +83,7 @@ class ElectronTerminalClient extends EventEmitter {
     const data = this.pendingData;
     this.pendingData = "";
 
-    if (this.webContents.isDestroyed()) {
-      return;
-    }
-
-    this.webContents.send("kanvibe:terminal-data", {
+    safeSendWebContents(this.webContents, "kanvibe:terminal-data", {
       taskId: this.taskId,
       tabId: this.tabId,
       data,
@@ -108,13 +105,11 @@ class ElectronTerminalClient extends EventEmitter {
     this.readyState = CLOSED;
     this.emit("close");
 
-    if (!this.webContents.isDestroyed()) {
-      this.webContents.send("kanvibe:terminal-close", {
-        taskId: this.taskId,
-        tabId: this.tabId,
-        reason: reason ?? null,
-      });
-    }
+    safeSendWebContents(this.webContents, "kanvibe:terminal-close", {
+      taskId: this.taskId,
+      tabId: this.tabId,
+      reason: reason ?? null,
+    });
   }
 
   emitMessage(message: string) {
