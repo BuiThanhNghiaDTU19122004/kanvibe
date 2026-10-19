@@ -38,7 +38,8 @@ describe("safeWebContents", () => {
 
     expect(safeSendWebContents(webContents, "channel-d")).toBe(false);
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to send IPC message on channel "channel-d"'),
+      "[kanvibe] Failed to send IPC message on channel:",
+      "channel-d",
       expect.any(Error),
     );
   });

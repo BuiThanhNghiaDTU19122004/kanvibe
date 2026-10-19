@@ -17,7 +17,7 @@ export function safeSendWebContents(
     webContents.send(channel, ...args);
     return true;
   } catch (error) {
-    console.warn(`[kanvibe] Failed to send IPC message on channel "${channel}":`, error);
+    console.warn("[kanvibe] Failed to send IPC message on channel:", channel, error);
     return false;
   }
 }

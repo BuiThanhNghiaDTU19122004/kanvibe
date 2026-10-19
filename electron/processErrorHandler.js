@@ -40,7 +40,7 @@ function safeSendWebContents(target, channel, ...args) {
     wc.send(channel, ...args);
     return true;
   } catch (error) {
-    console.warn(`[kanvibe] Failed to send on IPC channel "${channel}":`, error);
+    console.warn("[kanvibe] Failed to send on IPC channel:", channel, error);
     return false;
   }
 }
