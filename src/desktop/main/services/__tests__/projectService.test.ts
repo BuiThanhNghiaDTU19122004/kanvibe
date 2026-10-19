@@ -613,7 +613,7 @@ describe("projectService remote registration flow", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "같은 PC에 이름과 상위 폴더가 모두 같은 프로젝트가 이미 있습니다.",
+      error: "A project with the same name and parent folder already exists on this host.",
     });
     expect(save).not.toHaveBeenCalled();
   });
@@ -648,7 +648,7 @@ describe("projectService remote registration flow", () => {
 
     expect(result.registered).toEqual([]);
     expect(result.errors).toEqual([
-      "/home/tester/c/work/kanvibe: 같은 PC에 이름과 상위 폴더가 모두 같은 프로젝트가 이미 있습니다.",
+      "/home/tester/c/work/kanvibe: A project with the same name and parent folder already exists on this host.",
     ]);
     expect(save).not.toHaveBeenCalled();
   });
@@ -672,7 +672,7 @@ describe("projectService remote registration flow", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "이미 등록된 프로젝트입니다.",
+      error: "Project already registered.",
     });
   });
 

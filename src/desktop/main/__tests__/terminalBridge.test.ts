@@ -92,7 +92,7 @@ describe("terminalBridge.pasteImageToRemoteTerminal", () => {
 
     const result = await pasteImageToRemoteTerminal("task-1", "data:image/png;base64,aGVsbG8=");
 
-    expect(result).toEqual({ ok: false, error: "원격 세션이 아닙니다." });
+    expect(result).toEqual({ ok: false, error: "Not a remote session." });
     expect(mockTransferImageToRemoteHost).not.toHaveBeenCalled();
   });
 
@@ -103,7 +103,7 @@ describe("terminalBridge.pasteImageToRemoteTerminal", () => {
 
     const result = await pasteImageToRemoteTerminal("task-1", "data:image/png;base64,aGVsbG8=");
 
-    expect(result).toEqual({ ok: false, error: "SSH 호스트를 찾을 수 없습니다: unknown-host" });
+    expect(result).toEqual({ ok: false, error: "SSH host not found: unknown-host" });
   });
 
   it("transfers the decoded image and resolves with the remote path for a remote session", async () => {
@@ -237,7 +237,7 @@ describe("terminalBridge.openTerminal working directory resolution", () => {
 
     expect(result).toEqual({
       ok: false,
-      error: "작업 디렉토리가 존재하지 않습니다: /workspace/missing-wt",
+      error: "Working directory does not exist: /workspace/missing-wt",
     });
     expect(mockAttachLocalSession).not.toHaveBeenCalled();
   });

@@ -571,8 +571,8 @@ export async function attachLocalSession(
         );
       } catch (error) {
         console.error(`[터미널] tmux 세션 자동 생성 실패:`, error);
-        ws.close(1008, "tmux 세션 생성에 실패했습니다.");
-        throw new Error("tmux 세션 생성에 실패했습니다.");
+        ws.close(1008, "Failed to create tmux session.");
+        throw new Error("Failed to create tmux session.");
       }
     } else {
       hideExistingLocalTmuxStatusBar(sessionName, terminalEnvironment);
@@ -602,8 +602,8 @@ export async function attachLocalSession(
     });
   } catch (error) {
     console.error("[터미널] PTY spawn 실패:", error);
-    ws.close(1011, "터미널 프로세스 생성 실패");
-    throw new Error("터미널 프로세스 생성 실패");
+    ws.close(1011, "Failed to start terminal process.");
+    throw new Error("Failed to start terminal process.");
   }
 
   registerTerminalEntry(
@@ -673,8 +673,8 @@ export async function attachRemoteSession(
     });
   } catch (error) {
     console.error("[터미널] Remote PTY spawn 실패:", error);
-    ws.close(1011, "SSH 연결 실패");
-    throw new Error("SSH 연결 실패");
+    ws.close(1011, "SSH connection failed.");
+    throw new Error("SSH connection failed.");
   }
 
   debugLog("Remote PTY spawn 성공", { taskId, pid: ptyProcess.pid });

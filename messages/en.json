@@ -552,11 +552,14 @@
     },
     "openInVsCode": "Open in VS Code",
     "openInVsCodeFailed": "Could not launch VS Code. Check that the `code` command is on your PATH.",
-    "pullRequestNotFound": "No pull request is linked to this branch."
+    "pullRequestNotFound": "No pull request is linked to this branch.",
+    "viewOtherTasks": "View other tasks in this project"
   },
   "projectBranchTasks": {
     "title": "Project Tasks",
-    "noTasks": "No tasks in this project"
+    "noTasks": "No tasks in this project",
+    "totalTasks": "{count} total",
+    "loading": "Loading..."
   },
   "diffView": {
     "title": "Code Changes",
@@ -733,5 +736,20 @@
       "done": "Completed by you. The branch, worktree and terminal are kept."
     },
     "agentProcessHint": "CLI process is running. It may be waiting for your input."
+  },
+  "terminal": {
+    "connected": "Connected to terminal.",
+    "errors": {
+      "imagePasteFailed": "Failed to transfer image to remote terminal.",
+      "connectionClosed": "Connection closed.",
+      "connectionFailed": "Terminal connection failed.",
+      "noSession": "No session attached to this task.",
+      "notRemoteSession": "Not a remote session.",
+      "sshHostNotFound": "SSH host not found: {host}",
+      "tmuxSessionCreateFailed": "Failed to create tmux session.",
+      "processSpawnFailed": "Failed to start terminal process.",
+      "sshConnectionFailed": "SSH connection failed.",
+      "loginFailed": "Failed to start login command."
+    }
   }
 }

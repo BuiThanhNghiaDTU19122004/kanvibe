@@ -133,13 +133,13 @@ function findTabName(tabs: TerminalTab[], tabId: string): string | null {
 }
 
 function toFailure(error: unknown): TerminalTabMutationResult {
-  return { ok: false, error: error instanceof Error ? error.message : "터미널 탭 명령 실패" };
+  return { ok: false, error: error instanceof Error ? error.message : "Terminal tab command failed" };
 }
 
 export async function listTerminalTabs(taskId: string): Promise<TerminalTabListResult> {
   const target = await findTerminalSessionTarget(taskId);
   if (!target) {
-    return { ok: false, tabs: [], error: "작업에 연결된 세션이 없습니다." };
+    return { ok: false, tabs: [], error: "No session attached to this task." };
   }
 
   if (target.sessionType === SessionType.TERMINAL) {
@@ -152,7 +152,7 @@ export async function listTerminalTabs(taskId: string): Promise<TerminalTabListR
     return {
       ok: false,
       tabs: [],
-      error: error instanceof Error ? error.message : "터미널 탭 목록을 읽지 못했습니다.",
+      error: error instanceof Error ? error.message : "Failed to read terminal tab list.",
     };
   }
 }
@@ -160,7 +160,7 @@ export async function listTerminalTabs(taskId: string): Promise<TerminalTabListR
 export async function createTerminalTab(taskId: string): Promise<TerminalTabMutationResult> {
   const target = await findTerminalSessionTarget(taskId);
   if (!target) {
-    return { ok: false, error: "작업에 연결된 세션이 없습니다." };
+    return { ok: false, error: "No session attached to this task." };
   }
 
   if (target.sessionType === SessionType.TERMINAL) {
@@ -186,7 +186,7 @@ export async function selectTerminalTab(
 ): Promise<TerminalTabMutationResult> {
   const target = await findTerminalSessionTarget(taskId);
   if (!target) {
-    return { ok: false, error: "작업에 연결된 세션이 없습니다." };
+    return { ok: false, error: "No session attached to this task." };
   }
 
   if (target.sessionType === SessionType.TERMINAL) {
@@ -217,7 +217,7 @@ async function buildZellijSelectCommand(
 
   const tabName = findTabName(await readZellijTabs(target), tabId);
   if (!tabName) {
-    throw new Error("탭을 찾을 수 없습니다.");
+    throw new Error("Tab not found.");
   }
 
   return buildZellijGoToTabByNameCommand(target.sessionName, tabName);
@@ -234,7 +234,7 @@ export async function closeTerminalTab(
 ): Promise<TerminalTabMutationResult> {
   const target = await findTerminalSessionTarget(taskId);
   if (!target) {
-    return { ok: false, error: "작업에 연결된 세션이 없습니다." };
+    return { ok: false, error: "No session attached to this task." };
   }
 
   if (target.sessionType === SessionType.TERMINAL) {
@@ -254,7 +254,7 @@ export async function closeTerminalTab(
     } else {
       const tabName = findTabName(await readZellijTabs(target), tabId);
       if (!tabName) {
-        return { ok: false, error: "탭을 찾을 수 없습니다." };
+        return { ok: false, error: "Tab not found." };
       }
       await runTabCommands(
         buildZellijCloseFocusedTabCommands(target.sessionName, tabName),
@@ -275,12 +275,12 @@ export async function renameTerminalTab(
 ): Promise<TerminalTabMutationResult> {
   const trimmedName = name.trim();
   if (!trimmedName) {
-    return { ok: false, error: "탭 이름은 비워 둘 수 없습니다." };
+    return { ok: false, error: "Tab name cannot be empty." };
   }
 
   const target = await findTerminalSessionTarget(taskId);
   if (!target) {
-    return { ok: false, error: "작업에 연결된 세션이 없습니다." };
+    return { ok: false, error: "No session attached to this task." };
   }
 
   if (target.sessionType === SessionType.TERMINAL) {
@@ -304,7 +304,7 @@ export async function renameTerminalTab(
 
     const tabName = findTabName(await readZellijTabs(target), tabId);
     if (!tabName) {
-      return { ok: false, error: "탭을 찾을 수 없습니다." };
+      return { ok: false, error: "Tab not found." };
     }
 
     await runTabCommands(
@@ -323,12 +323,12 @@ export async function moveTerminalTab(
   targetIndex: number,
 ): Promise<TerminalTabMutationResult> {
   if (!Number.isInteger(targetIndex) || targetIndex < 0) {
-    return { ok: false, error: "이동할 위치가 올바르지 않습니다." };
+    return { ok: false, error: "Invalid target position." };
   }
 
   const target = await findTerminalSessionTarget(taskId);
   if (!target) {
-    return { ok: false, error: "작업에 연결된 세션이 없습니다." };
+    return { ok: false, error: "No session attached to this task." };
   }
 
   if (target.sessionType === SessionType.TERMINAL) {
@@ -345,7 +345,7 @@ export async function moveTerminalTab(
     const currentTabs = await readTabs(target);
     const currentTab = currentTabs.find((tab) => tab.id === tabId);
     if (!currentTab) {
-      return { ok: false, error: "탭을 찾을 수 없습니다." };
+      return { ok: false, error: "Tab not found." };
     }
 
     const boundedTargetIndex = Math.min(targetIndex, currentTabs.length - 1);

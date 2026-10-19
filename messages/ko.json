@@ -65,7 +65,8 @@
       "viewRelease": "릴리스 보기",
       "dontShowVersionAgain": "이 버전 다시 보지 않기",
       "dismissOverlay": "업데이트 dialog 닫기"
-    }
+    },
+    "back": "뒤로"
   },
   "board": {
     "title": "",
@@ -179,7 +180,13 @@
     "priorityMedium": "!!",
     "priorityHigh": "!!!",
     "priorityNone": "없음",
-    "inheritedPriority": "프로젝트 root task에서 물려받은 우선순위입니다."
+    "inheritedPriority": "프로젝트 root task에서 물려받은 우선순위입니다.",
+    "createDescription": "수행할 작업을 설명해 주세요. KanVibe가 독립된 worktree를 준비하고 에이전트를 시작합니다.",
+    "titleSuggestion": "요청 내용에서 제안된 제목입니다. 필요 시 수정할 수 있습니다.",
+    "branchesFailed": "프로젝트 브랜치 목록을 불러오지 못했습니다. 기본 브랜치가 선택됩니다.",
+    "limitedTracking": "Antigravity 대화 및 하위 에이전트 추적은 아직 지원되지 않습니다.",
+    "advancedOptions": "고급 설정",
+    "startTask": "생성 및 시작"
   },
   "branch": {
     "title": "브랜치 분기",
@@ -545,11 +552,14 @@
     },
     "openInVsCode": "VS Code에서 열기",
     "openInVsCodeFailed": "VS Code를 열지 못했습니다. `code` 명령을 PATH에서 찾을 수 있는지 확인하세요.",
-    "pullRequestNotFound": "이 브랜치에 연결된 PR을 찾지 못했습니다."
+    "pullRequestNotFound": "이 브랜치에 연결된 PR을 찾지 못했습니다.",
+    "viewOtherTasks": "다른 작업 보기"
   },
   "projectBranchTasks": {
     "title": "프로젝트 작업",
-    "noTasks": "이 프로젝트에는 작업이 없습니다"
+    "noTasks": "이 프로젝트에는 작업이 없습니다",
+    "totalTasks": "총 {count}개",
+    "loading": "로딩 중..."
   },
   "diffView": {
     "title": "코드 변경 사항",
@@ -595,7 +605,8 @@
     "errors": {
       "invalid-name": "계정 이름에는 영문, 숫자, -, _, . 만 쓸 수 있습니다.",
       "already-exists": "같은 이름의 계정이 이미 있습니다.",
-      "manual-logout-required": "이 계정은 앱에서 로그아웃할 수 없어 목록에서만 지웠습니다."
+      "manual-logout-required": "이 계정은 앱에서 로그아웃할 수 없어 목록에서만 지웠습니다.",
+      "operationFailed": "계정을 업데이트하지 못했습니다. 다시 시도해 주세요."
     },
     "usageSection": "사용량"
   },
@@ -641,5 +652,104 @@
     "viewDetails": "상세 보기",
     "agentRunningIn": "{window}에서 실행 중",
     "tasksCompleted": "완료된 작업"
+  },
+  "mvp": {
+    "language": "언어",
+    "retry": "다시 시도",
+    "back": "뒤로",
+    "backToDashboard": "대시보드로 돌아가기",
+    "loadFailed": "데이터를 불러오지 못했습니다",
+    "loadFailedHint": "작업은 안전하게 보존되었습니다. 다시 불러오기를 시도해 주세요. 현재 표시된 데이터는 이전 내용일 수 있습니다.",
+    "dashboardTitle": "내 작업 공간",
+    "dashboardDescription": "사용자 개입이 필요한 작업을 확인하고, 에이전트를 모니터링하며 결과를 검토합니다.",
+    "needsAttention": "확인이 필요한 작업",
+    "nothingNeedsAttention": "지금은 처리가 필요한 작업이 없습니다.",
+    "pendingHint": "에이전트가 사용자의 확인을 기다리고 있습니다. 터미널을 열어 요청을 확인해 주세요.",
+    "reviewHint": "작업을 완료로 표시하기 전에 최신 응답과 변경 사항을 검토해 주세요. CLI가 아직 실행 중일 수 있습니다.",
+    "resolveError": "확인 및 해결",
+    "reviewResult": "결과 검토",
+    "respondToAgent": "에이전트 요청 확인",
+    "observedProcesses": "감지된 CLI 프로세스; 실행 중인 프로세스가 입력을 대기하고 있을 수 있습니다.",
+    "processRunning": "CLI 실행 중",
+    "monitorUnavailable": "에이전트 상태를 확인할 수 없음",
+    "monitorUnavailableHint": "Windows 터미널 프로세스를 검사하지 못했습니다. 에이전트가 중단된 것은 아닙니다.",
+    "lastChecked": "최근 업데이트: {time}",
+    "checkingAgents": "에이전트 프로세스 확인 중…",
+    "viewActivity": "활동 보기",
+    "taskList": "작업 목록 · 최근 업데이트순",
+    "activity": "활동",
+    "results": "결과",
+    "terminal": "터미널",
+    "taskViews": "작업 보기",
+    "startAgent": "{agent} 시작",
+    "startingAgent": "에이전트 시작 중…",
+    "agentRunning": "에이전트 실행 중",
+    "openTerminal": "터미널 열기",
+    "openAccounts": "AI 계정",
+    "loadingActivity": "활동 기록 불러오는 중…",
+    "historyUnavailable": "{provider}의 대화 추적은 지원되지 않습니다. 진행 상황은 터미널에서 확인해 주세요.",
+    "yourRequest": "요청 내용",
+    "noActivityYet": "이 작업에 기록된 대화 내용이 아직 없습니다. 터미널에서 로그인 또는 프로젝트 신뢰 확인을 완료했는지 확인해 주세요.",
+    "agentTree": "에이전트 호출 트리 및 타임라인",
+    "agentTreeHint": "CLI 로그에서 감지된 호출입니다. 호출 종료가 성공을 보장하지는 않습니다.",
+    "lastResponse": "최근 에이전트 응답",
+    "noResponse": "아직 에이전트 응답이 없습니다.",
+    "changedFiles": "변경된 파일",
+    "viewDiff": "변경 사항 보기",
+    "filesUnavailable": "변경된 파일 목록을 읽지 못했습니다. 다시 시도해 주세요.",
+    "noChangedFiles": "변경된 파일이 없습니다.",
+    "checks": "결과 검증",
+    "checksUnknown": "정형화된 테스트 결과가 없습니다. 에이전트 활동 기록이나 터미널 출력을 직접 확인해 주세요. KanVibe가 성공 여부를 자동으로 검증하지 않았습니다.",
+    "openPr": "풀 리퀘스트 열기",
+    "continueTask": "작업 계속하기",
+    "markDone": "완료로 표시",
+    "doneKeepsResources": "완료하더라도 브랜치, worktree, 터미널은 유지됩니다. 작업 삭제는 별도의 작업입니다.",
+    "finishSetup": "첫 작업 설정 완료하기",
+    "continueSetup": "설정 계속하기",
+    "setupCheckFailed": "설정 상태를 확인하지 못했습니다. 다시 시도해 주세요.",
+    "setupSaveFailed": "설정 진행 상태를 저장하지 못했습니다. 다시 시도해 주세요.",
+    "prepareTools": "Git 및 Claude Code 준비",
+    "signInClaude": "Claude Code 로그인",
+    "runFirstTask": "첫 작업 실행하기",
+    "chooseProject": "프로젝트 선택",
+    "setupToolsHint": "Windows 워크플로우를 위해 Git, Git Bash 및 Claude Code가 필요합니다. 계속하기 전에 기본 Claude 계정으로 로그인해 주세요.",
+    "accountSignedIn": "Claude 계정에 로그인되었습니다",
+    "recheck": "다시 확인",
+    "projectReady": "등록된 프로젝트가 준비되었습니다.",
+    "firstTaskHint": "이제 작업을 생성해 보세요. 에이전트가 실제로 실행된 후에 설정이 완료됩니다.",
+    "setupIncomplete": "일부 설정 단계가 아직 완료되지 않았습니다. 지금 완료하거나 대시보드 체크리스트에서 나중에 다시 진행할 수 있습니다.",
+    "skipThisStep": "이 단계 건너뛰기",
+    "launchErrors": {
+      "terminal-not-ready": "터미널이 아직 연결되지 않았습니다. 터미널을 연 후 다시 시작해 주세요.",
+      "missing-cli": "선택한 CLI가 설치되지 않았거나 PATH에 없습니다. 설치 및 로그인 후 다시 시도해 주세요.",
+      "already-running": "이 터미널에서 이미 에이전트가 실행 중입니다. 중복 실행을 피하기 위해 해당 터미널에서 작업을 계속해 주세요.",
+      "terminal-busy": "터미널에서 다른 명령이 실행 중입니다. 완료된 후 에이전트를 시작해 주세요.",
+      "unsupported-session": "안내 시작 기능은 로컬 Windows 터미널을 지원합니다. 다른 세션 유형은 터미널에서 직접 실행해 주세요.",
+      "launch-failed": "에이전트를 시작하거나 프로세스를 확인하지 못했습니다. 터미널을 확인하고 다시 시도해 주세요.",
+      "launch-unconfirmed": "시작 명령을 전송했으나 에이전트 프로세스가 확인되지 않았습니다. 터미널을 확인한 후 다시 시도해 주세요."
+    },
+    "statusHints": {
+      "todo": "시작할 준비가 되었습니다. 준비되면 에이전트를 실행하세요.",
+      "progress": "작업이 진행 중입니다. 활동 기록을 확인하거나 터미널을 여세요.",
+      "pending": "사용자의 확인이 필요합니다. 터미널에서 에이전트의 요청을 확인하세요.",
+      "review": "에이전트가 턴을 마쳤습니다. 완료하기 전에 결과를 검토하세요.",
+      "done": "사용자가 완료로 표시했습니다. 브랜치, worktree 및 터미널은 유지됩니다."
+    },
+    "agentProcessHint": "CLI 프로세스가 실행 중입니다. 사용자 입력을 대기하고 있을 수 있습니다."
+  },
+  "terminal": {
+    "connected": "터미널에 연결되었습니다.",
+    "errors": {
+      "imagePasteFailed": "원격 터미널로 이미지 전송에 실패했습니다.",
+      "connectionClosed": "연결이 종료되었습니다.",
+      "connectionFailed": "터미널 연결 실패",
+      "noSession": "작업에 연결된 세션이 없습니다.",
+      "notRemoteSession": "원격 세션이 아닙니다.",
+      "sshHostNotFound": "SSH 호스트를 찾을 수 없습니다: {host}",
+      "tmuxSessionCreateFailed": "tmux 세션 생성에 실패했습니다.",
+      "processSpawnFailed": "터미널 프로세스 생성 실패",
+      "sshConnectionFailed": "SSH 연결 실패",
+      "loginFailed": "로그인 명령을 실행하지 못했습니다."
+    }
   }
 }

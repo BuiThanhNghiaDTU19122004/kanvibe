@@ -40,7 +40,8 @@
     "prMergeAlert": {
       "title": "检测到 PR 已合并",
       "message": "已确认 worktree PR {branchName} 已被合并。要删除任务“{taskTitle}”及其资源吗？",
-      "prLinkLabel": "PR 链接"
+      "prLinkLabel": "PR 链接",
+      "batchMessage": "这是在最新扫描中检测到已合并的 PR 列表。请勾选要删除的任务并一起处理。"
     },
     "backgroundSyncReview": {
       "title": "后台同步检查",
@@ -64,7 +65,8 @@
       "viewRelease": "查看版本",
       "dontShowVersionAgain": "不再显示此版本",
       "dismissOverlay": "关闭更新对话框"
-    }
+    },
+    "back": "返回"
   },
   "board": {
     "title": "",
@@ -178,7 +180,13 @@
     "priorityMedium": "!!",
     "priorityHigh": "!!!",
     "priorityNone": "无",
-    "inheritedPriority": "继承自项目根任务的优先级。"
+    "inheritedPriority": "继承自项目根任务的优先级。",
+    "createDescription": "描述工作内容。KanVibe 将准备独立的 worktree 并启动 Agent。",
+    "titleSuggestion": "根据您的请求生成的建议标题；您可以编辑它。",
+    "branchesFailed": "无法读取项目分支。仍选择默认分支。",
+    "limitedTracking": "暂不支持 Antigravity 对话与子 Agent 追踪。",
+    "advancedOptions": "高级选项",
+    "startTask": "创建并启动"
   },
   "branch": {
     "title": "创建分支",
@@ -544,11 +552,14 @@
     },
     "openInVsCode": "在 VS Code 中打开",
     "openInVsCodeFailed": "无法启动 VS Code。请确认 `code` 命令在 PATH 中。",
-    "pullRequestNotFound": "该分支没有关联的 PR。"
+    "pullRequestNotFound": "该分支没有关联的 PR。",
+    "viewOtherTasks": "查看该项目中的其他任务"
   },
   "projectBranchTasks": {
     "title": "项目任务",
-    "noTasks": "此项目中没有任务"
+    "noTasks": "此项目中没有任务",
+    "totalTasks": "共 {count} 个",
+    "loading": "加载中..."
   },
   "diffView": {
     "title": "代码变更",
@@ -594,7 +605,8 @@
     "errors": {
       "invalid-name": "账号名称只能使用字母、数字、-、_ 和 . 。",
       "already-exists": "已存在同名账号。",
-      "manual-logout-required": "该账号无法在应用内登出，因此仅从列表中移除。"
+      "manual-logout-required": "该账号无法在应用内登出，因此仅从列表中移除。",
+      "operationFailed": "无法更新账号。请重试。"
     },
     "usageSection": "用量"
   },
@@ -640,5 +652,104 @@
     "viewDetails": "查看详情",
     "agentRunningIn": "运行在 {window}",
     "tasksCompleted": "已完成任务"
+  },
+  "mvp": {
+    "language": "语言",
+    "retry": "重试",
+    "back": "返回",
+    "backToDashboard": "返回仪表板",
+    "loadFailed": "无法加载数据",
+    "loadFailedHint": "您的任务已保留。请尝试重新加载；当前显示的数据可能已过期。",
+    "dashboardTitle": "工作空间",
+    "dashboardDescription": "查看需要您处理的事项，跟进 Agent 并审查工作成果。",
+    "needsAttention": "需要您的处理",
+    "nothingNeedsAttention": "当前没有需要您处理的事项。",
+    "pendingHint": "Agent 报告需要人工介入。请打开终端查看其请求。",
+    "reviewHint": "在将此任务标记为完成之前，请审查最新回复和更改。CLI 可能仍在运行。",
+    "resolveError": "检查并解决",
+    "reviewResult": "审查结果",
+    "respondToAgent": "检查 Agent 请求",
+    "observedProcesses": "检测到的 CLI 进程；运行中的进程可能正在等待输入。",
+    "processRunning": "CLI 已打开",
+    "monitorUnavailable": "无法获取 Agent 状态",
+    "monitorUnavailableHint": "无法检查 Windows 终端进程。这并不意味着您的 Agent 已停止。",
+    "lastChecked": "最近更新：{time}",
+    "checkingAgents": "正在检查 Agent 进程…",
+    "viewActivity": "查看动态",
+    "taskList": "任务列表 · 按最近更新排序",
+    "activity": "活动",
+    "results": "结果",
+    "terminal": "终端",
+    "taskViews": "任务视图",
+    "startAgent": "启动 {agent}",
+    "startingAgent": "正在启动 Agent…",
+    "agentRunning": "Agent 运行中",
+    "openTerminal": "打开终端",
+    "openAccounts": "AI 账号",
+    "loadingActivity": "正在加载活动记录…",
+    "historyUnavailable": "{provider} 暂不支持对话追踪。请在终端中查看进度。",
+    "yourRequest": "您的需求",
+    "noActivityYet": "此任务尚无对话记录。请在终端中检查登录或项目信任提示。",
+    "agentTree": "Agent 调用树与时间线",
+    "agentTreeHint": "CLI 日志中捕获的调用。调用结束并不保证任务成功。",
+    "lastResponse": "最新 Agent 回复",
+    "noResponse": "暂无 Agent 回复。",
+    "changedFiles": "已变更文件",
+    "viewDiff": "查看更改",
+    "filesUnavailable": "无法读取已变更的文件。请尝试重新加载。",
+    "noChangedFiles": "未发现已变更的文件。",
+    "checks": "结果验证",
+    "checksUnknown": "没有结构化的测试结果。请在 Agent 活动记录或终端中查看输出；KanVibe 尚未验证成功状态。",
+    "openPr": "打开 Pull Request",
+    "continueTask": "继续工作",
+    "markDone": "标记为完成",
+    "doneKeepsResources": "标记完成仍会保留分支、worktree 和终端。删除任务是独立操作。",
+    "finishSetup": "完成首个任务的配置",
+    "continueSetup": "继续配置",
+    "setupCheckFailed": "无法检查环境配置。请重试。",
+    "setupSaveFailed": "无法保存配置进度。请重试。",
+    "prepareTools": "准备 Git 和 Claude Code",
+    "signInClaude": "登录 Claude Code",
+    "runFirstTask": "运行您的首个任务",
+    "chooseProject": "选择项目",
+    "setupToolsHint": "此 Windows 工作流需要 Git、Git Bash 和 Claude Code。继续前请登录默认 Claude 账号。",
+    "accountSignedIn": "Claude 账号已登录",
+    "recheck": "重新检查",
+    "projectReady": "已有注册的项目可用。",
+    "firstTaskHint": "接下来请创建任务。只有在 Agent 实际启动后，配置才算完成。",
+    "setupIncomplete": "部分配置步骤尚未完成。您可以现在完成，或稍后从仪表板清单继续。",
+    "skipThisStep": "跳过此步骤",
+    "launchErrors": {
+      "terminal-not-ready": "终端尚未连接。请打开终端后重试启动。",
+      "missing-cli": "所选 CLI 未安装或不在 PATH 中。请安装并登录后重试。",
+      "already-running": "此终端中已有 Agent 在运行。请在该终端中继续，以避免重复启动。",
+      "terminal-busy": "终端中正在运行其他命令。请等待其完成后再启动 Agent。",
+      "unsupported-session": "引导式启动支持本地 Windows 终端。其他会话类型请在终端中手动操作。",
+      "launch-failed": "无法启动 Agent 或检查其进程。请检查终端并重试。",
+      "launch-unconfirmed": "已发送启动命令，但未确认到 Agent 进程。重试前请检查终端。"
+    },
+    "statusHints": {
+      "todo": "准备就绪。准备好后即可启动 Agent。",
+      "progress": "工作正在进行中。请关注动态或打开终端。",
+      "pending": "需要您的处理。请在终端中查看 Agent 的请求。",
+      "review": "Agent 已结束当前轮次。请在完成前审查结果。",
+      "done": "已由您标记完成。分支、worktree 和终端均已保留。"
+    },
+    "agentProcessHint": "CLI 进程正在运行。可能正在等待您的输入。"
+  },
+  "terminal": {
+    "connected": "已连接到终端。",
+    "errors": {
+      "imagePasteFailed": "传输图片到远程终端失败。",
+      "connectionClosed": "连接已关闭。",
+      "connectionFailed": "终端连接失败。",
+      "noSession": "该任务没有关联的终端会话。",
+      "notRemoteSession": "不是远程会话。",
+      "sshHostNotFound": "未找到 SSH 主机: {host}",
+      "tmuxSessionCreateFailed": "创建 tmux 会话失败。",
+      "processSpawnFailed": "启动终端进程失败。",
+      "sshConnectionFailed": "SSH 连接失败。",
+      "loginFailed": "启动登录命令失败。"
+    }
   }
 }
