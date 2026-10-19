@@ -44,10 +44,10 @@ export function findWindowsVsCodeCommand(env: NodeJS.ProcessEnv = process.env): 
   const programFilesX86 = env["ProgramFiles(x86)"] || "";
 
   const candidatePaths = [
-    localAppData ? path.join(localAppData, "Programs", "Microsoft VS Code", "bin", "code.cmd") : null,
-    localAppData ? path.join(localAppData, "Programs", "Microsoft VS Code Insiders", "bin", "code-insiders.cmd") : null,
-    programFiles ? path.join(programFiles, "Microsoft VS Code", "bin", "code.cmd") : null,
-    programFilesX86 ? path.join(programFilesX86, "Microsoft VS Code", "bin", "code.cmd") : null,
+    localAppData ? path.win32.join(localAppData, "Programs", "Microsoft VS Code", "bin", "code.cmd") : null,
+    localAppData ? path.win32.join(localAppData, "Programs", "Microsoft VS Code Insiders", "bin", "code-insiders.cmd") : null,
+    programFiles ? path.win32.join(programFiles, "Microsoft VS Code", "bin", "code.cmd") : null,
+    programFilesX86 ? path.win32.join(programFilesX86, "Microsoft VS Code", "bin", "code.cmd") : null,
   ].filter((p): p is string => Boolean(p));
 
   for (const candidate of candidatePaths) {
@@ -56,12 +56,12 @@ export function findWindowsVsCodeCommand(env: NodeJS.ProcessEnv = process.env): 
     }
   }
 
-  const pathDirs = (env.PATH || "").split(path.delimiter);
+  const pathDirs = (env.PATH || "").split(path.win32.delimiter);
   const extensions = [".cmd", ".bat", ".exe"];
   for (const dir of pathDirs) {
     if (!dir) continue;
     for (const ext of extensions) {
-      const candidate = path.join(dir, `code${ext}`);
+      const candidate = path.win32.join(dir, `code${ext}`);
       if (fs.existsSync(candidate)) {
         return candidate;
       }

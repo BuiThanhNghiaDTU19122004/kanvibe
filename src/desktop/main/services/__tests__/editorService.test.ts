@@ -1,3 +1,4 @@
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -172,7 +173,7 @@ describe("editorService", () => {
   describe("findWindowsVsCodeCommand", () => {
     it("LOCALAPPDATA 경로에 설치된 code.cmd를 우선 감지한다", async () => {
       const { findWindowsVsCodeCommand } = await import("@/desktop/main/services/editorService");
-      const userCodeCmd = "C:\\Users\\User\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd";
+      const userCodeCmd = path.win32.join("C:\\Users\\User\\AppData\\Local", "Programs", "Microsoft VS Code", "bin", "code.cmd");
       mocks.existsSync.mockImplementation((p: string) => p === userCodeCmd);
 
       const found = findWindowsVsCodeCommand({
@@ -184,7 +185,7 @@ describe("editorService", () => {
 
     it("기본 설치 경로에 없으면 PATH를 탐색하여 code.cmd를 찾는다", async () => {
       const { findWindowsVsCodeCommand } = await import("@/desktop/main/services/editorService");
-      const customPathCode = "D:\\CustomTools\\bin\\code.cmd";
+      const customPathCode = path.win32.join("D:\\CustomTools\\bin", "code.cmd");
       mocks.existsSync.mockImplementation((p: string) => p === customPathCode);
 
       const found = findWindowsVsCodeCommand({
@@ -219,7 +220,7 @@ describe("editorService", () => {
 
     it("Windows 플랫폼에서는 cmd.exe 래퍼와 verbatimArguments 옵션을 구성한다", async () => {
       const { buildVsCodeExecution } = await import("@/desktop/main/services/editorService");
-      const userCodeCmd = "C:\\Users\\User\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd";
+      const userCodeCmd = path.win32.join("C:\\Users\\User\\AppData\\Local", "Programs", "Microsoft VS Code", "bin", "code.cmd");
       mocks.existsSync.mockImplementation((p: string) => p === userCodeCmd);
 
       const plan = buildVsCodeExecution(
@@ -243,7 +244,7 @@ describe("editorService", () => {
   describe("Windows (win32) openTaskInVsCode", () => {
     it("Windows에서 공백이 포함된 worktree 경로를 cmd.exe를 통해 안전하게 연다", async () => {
       stubPlatform("win32");
-      const userCodeCmd = "C:\\Users\\User\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd";
+      const userCodeCmd = path.win32.join("C:\\Users\\User\\AppData\\Local", "Programs", "Microsoft VS Code", "bin", "code.cmd");
       mocks.existsSync.mockImplementation((p: string) => p === userCodeCmd);
 
       mocks.taskRepo.findOneBy.mockResolvedValue({
